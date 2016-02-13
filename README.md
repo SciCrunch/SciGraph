@@ -2,7 +2,7 @@ EXAMPLE
 =======
 This file has been modified to get first time developers up and running so they can load
 relevant ontologies and build core and services quickly.
-Scigraph is build using [Apache Maven](https://maven.apache.org/guides/index.html), invoked via `mvn` on the commandline.
+Scigraph is built using [Apache Maven](https://maven.apache.org/guides/index.html), invoked via `mvn` on the commandline.
 
     git clone https://github.com/SciCrunch/SciGraph;
 	cd SciGraph;
