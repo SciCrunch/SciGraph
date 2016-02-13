@@ -1,0 +1,56 @@
+server:
+  type: simple
+  applicationContextPath: /scigraph
+  adminContextPath: /admin
+  connector:
+    type: http
+    port: 9000
+  #connector:
+    #type: https
+    #port: 9000
+    #trustStorePath: /path/to/my.truststure
+    #trustStorePassword: '123456'
+    #keyStorePath: /path/to/my.keystore
+    #keyStorePassword: '123456'
+
+logging:
+  level: INFO
+
+graphConfiguration:
+  #it is possible to load 10 graphs and then choose only 1 of them to run services for
+  location: /tmp/devGraph1
+  neo4jConfig:
+    dump_configuration : true
+    dbms.pagecache.memory : 1G
+  #The curies section defines the shortened IRI representation
+  #use within scigraph for ontology identifiers.
+  #Normally this would be sourced from an external file such as
+  #https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/scigraph/nifstd_curie_map.yaml
+  #and this services yaml file would be generated on the fly
+  #You should have curies for every IRI prefix that will appear in
+  #the graph. You can probably find these in advance by looking at
+  #the namespaces portion of your ontology files.
+  curies:
+    'CHEBI' : 'http://purl.obolibrary.org/obo/CHEBI_'
+    'GO' : 'http://purl.obolibrary.org/obo/GO_'
+    'OBO' : 'http://purl.obolibrary.org/obo/'
+    'NCBITaxon' : 'http://purl.obolibrary.org/obo/NCBITaxon_'
+    'UBERON' : 'http://purl.obolibrary.org/obo/UBERON_'
+  indexedNodeProperties:
+    - label
+    - fragment
+    - curie
+    - definition
+    - synonym
+    - acronym
+    - abbreviation
+  exactNodeProperties:
+    - label
+    - fragment
+    - curie
+    - definition
+    - synonym
+    - acronym
+    - abbreviation
+    - deprecated
+

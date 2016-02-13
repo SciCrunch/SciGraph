@@ -1,3 +1,18 @@
+EXAMPLE
+=======
+This file has been modified to get first time developers up and running so they can load
+relevant ontologies and build core and services quickly.
+Scigraph is build using [Apache Maven](https://maven.apache.org/guides/index.html), invoked via `mvn` on the commandline.
+
+    git clone https://github.com/SciCrunch/SciGraph;
+	cd SciGraph;
+	git checkout example;
+	mvn -DskipTests -DskipITs install;
+    cd SciGraph-core;
+    mvn exec:java -Dexec.mainClass="io.scigraph.owlapi.loader.BatchOwlLoader" -Dexec.args="-c ../exampleGraph.yaml";
+	cd ../SciGraph-services;
+    mvn exec:java -Dexec.mainClass="io.scigraph.services.MainApplication" -Dexec.args="server ../exampleServices.yaml";
+
 SciGraph
 ========
 [![Build Status](https://travis-ci.org/SciGraph/SciGraph.svg?branch=master)](https://travis-ci.org/SciGraph/SciGraph)

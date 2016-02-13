@@ -1,0 +1,70 @@
+graphConfiguration:
+    # The location of the graph.
+    # If this location does not exist it will be created.
+    # Loading will append content to existing graphs.
+    location: /tmp/devGraph1
+    neo4jConfig:
+      dump_configuration : true
+      dbms.pagecache.memory : 1G
+    indexedNodeProperties:
+      - label
+      - fragment
+      - curie
+      - definition
+      - synonym
+      - acronym
+      - abbreviation
+    exactNodeProperties:
+      - label
+      - fragment
+      - curie
+      - definition
+      - synonym
+      - acronym
+      - abbreviation
+      - deprecated
+
+# A list of ontologies to import.
+ontologies:
+  - url: http://purl.obolibrary.org/obo/uberon.owl
+  #- url: /path/to/myontology.owl
+   #reasonerConfiguration:
+     #factory: org.semanticweb.elk.owlapi.ElkReasonerFactory
+
+# Categories are used for vocabulary term filtering and are inherited to
+# subclasses of their parent. They are also added as node labels for
+# convenience
+categories:
+    http://purl.obolibrary.org/obo/OBI_0100026 : organism
+    http://purl.obolibrary.org/obo/DOID_4 : disease
+    http://purl.obolibrary.org/obo/UBERON_0001062 : anatomical entity
+    http://purl.obolibrary.org/obo/GO_0008150 : biological process
+    
+# All properties are stored but can optionally be added to a new node property
+mappedProperties:
+  - name: label # The name of the new property
+    properties: # The list of properties mapped to the new property
+    - http://www.w3.org/2000/01/rdf-schema#label
+  - name: comment
+    properties:
+    - http://www.w3.org/2000/01/rdf-schema#comment
+  - name: definition
+    properties:
+    - http://www.FIXME.org/nsupper#definition
+  - name: synonym
+    properties:
+    - http://www.FIXME.org/nsupper#synonym
+    - http://www.geneontology.org/formats/oboInOwl#hasBroadSynonym
+    - http://www.geneontology.org/formats/oboInOwl#hasExactSynonym
+    - http://www.geneontology.org/formats/oboInOwl#hasNarrowSynonym
+    - http://www.geneontology.org/formats/oboInOwl#hasRelatedSynonym
+    - http://purl.org/sig/ont/fma/synonym
+    - http://purl.org/sig/ont/fma/slot_synonym
+  - name: acronym
+    properties:
+    - http://www.FIXME.org/nsupper#acronym
+    - http://
+  - name: deprecated
+    properties:
+    - http://www.w3.org/2002/07/owl#deprecated
+
