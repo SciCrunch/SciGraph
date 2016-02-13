@@ -4,11 +4,12 @@ This file has been modified to get first time developers up and running so they 
 relevant ontologies and build core and services quickly.
 Scigraph is built using [Apache Maven](https://maven.apache.org/guides/index.html), invoked via `mvn` on the commandline.
 The two configuration files that you should read over and modify are
-exampleGraph.yaml and exampleServices.yaml. exampleGraph.yaml controls
-how SciGraph loads ontologies into Neo4j and how it indexes them and
-postprocesses them once they are in Neo4j. exampleServices.yaml controls
-the configuration of the SciGraph REST services (and can be quite a bit
-more complex than the example here).
+[exampleGraph.yaml](SciGraph/exampleGraph.yaml) and
+[exampleServices.yaml](SciGraph/exampleGraph.yaml).
+exampleGraph.yaml controls how SciGraph loads ontologies into Neo4j
+and how it indexes them and postprocesses them once they are in Neo4j.
+exampleServices.yaml controls the configuration of the SciGraph REST
+services (and can be quite a bit more complex than the example here).
 
     git clone https://github.com/SciCrunch/SciGraph;
 	cd SciGraph;
