@@ -34,11 +34,11 @@ ontologies:
 # Categories are used for vocabulary term filtering and are inherited to
 # subclasses of their parent. They are also added as node labels for
 # convenience
-categories:
-    http://purl.obolibrary.org/obo/OBI_0100026 : organism
-    http://purl.obolibrary.org/obo/DOID_4 : disease
-    http://purl.obolibrary.org/obo/UBERON_0001062 : anatomical entity
-    http://purl.obolibrary.org/obo/GO_0008150 : biological process
+# categories:
+#    http://purl.obolibrary.org/obo/OBI_0100026 : organism
+#    http://purl.obolibrary.org/obo/DOID_4 : disease
+#    http://purl.obolibrary.org/obo/UBERON_0001062 : anatomical entity
+#    http://purl.obolibrary.org/obo/GO_0008150 : biological process
     
 # All properties are stored but can optionally be added to a new node property
 mappedProperties:

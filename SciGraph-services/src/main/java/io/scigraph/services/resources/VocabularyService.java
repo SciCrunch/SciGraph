@@ -34,6 +34,7 @@ import io.scigraph.vocabulary.Vocabulary.Query;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator; // Atorr
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -218,9 +219,25 @@ public class VocabularyService extends BaseResource {
         includeAcronyms(searchAcronyms.get()).
         limit(1000);
     List<Concept> concepts = vocabulary.getConceptsFromPrefix(builder.build());
-    List<Completion> completions = getCompletions(builder.build(), concepts);
+    List<Completion> comps = getCompletions(builder.build(), concepts);
     // TODO: Move completions to scigraph-core for #51
-    sort(completions);
+    sort(comps);
+
+    /**** Completion Filter ****/
+    List<String> alreadyIn = new ArrayList<String>(); // list of each concept 
+                                                      // for each completion
+    List<Completion> completions = new ArrayList<Completion>(); 
+    for (Completion comp : comps) {
+        System.out.println("completion: " + comp.getCompletion());
+        System.out.println("curie: " + comp.getConcept().getCurie());
+        System.out.println("filtered: " + alreadyIn.contains(comp.getConcept().getCurie()));
+        if(!alreadyIn.contains(comp.getConcept().getCurie())) { 
+            alreadyIn.add(comp.getConcept().getCurie());
+            completions.add(comp);
+        }
+    }
+    /**** Completion Filter ****/
+    
     int endIndex = limit.get() > completions.size() ? completions.size() : limit.get();
     completions = completions.subList(0, endIndex);
     return completions;
