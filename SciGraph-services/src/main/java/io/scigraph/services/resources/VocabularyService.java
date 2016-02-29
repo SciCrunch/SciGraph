@@ -196,21 +196,32 @@ public class VocabularyService extends BaseResource {
   public List<Completion> findByPrefix(
       @ApiParam( value = "Term prefix to find", required = true )
       @PathParam("term") String termPrefix,
+      
       @ApiParam( value = DocumentationStrings.RESULT_LIMIT_DOC, required = false )
       @QueryParam("limit") @DefaultValue("20") IntParam limit,
+      
       @ApiParam( value = DocumentationStrings.SEARCH_SYNONYMS, required = false )
       @QueryParam("searchSynonyms") @DefaultValue("true") BooleanParam searchSynonyms,
+      
       @ApiParam( value = DocumentationStrings.SEARCH_ABBREVIATIONS, required = false )
       @QueryParam("searchAbbreviations") @DefaultValue("false") BooleanParam searchAbbreviations,
+      
       @ApiParam( value = DocumentationStrings.SEARCH_ACRONYMS, required = false )
       @QueryParam("searchAcronyms") @DefaultValue("false") BooleanParam searchAcronyms,
+      
       @ApiParam( value = DocumentationStrings.INCLUDE_DEPRECATED_CLASSES, required = false )
       @QueryParam("includeDeprecated") @DefaultValue("false") BooleanParam includeDeprecated,
+      
       @ApiParam( value = "Categories to search (defaults to all)", required = false )
       @QueryParam("category") List<String> categories,
+      
       @ApiParam( value = "CURIE prefixes to search (defaults to all)", required = false )
-      @QueryParam("prefix") List<String> prefixes) {
+      @QueryParam("prefix") List<String> prefixes,
+      
+      @ApiParam( value = "Completion filter flag", required = false )
+      @QueryParam("filter") @DefaultValue("false") BooleanParam filterOn) {
     Vocabulary.Query.Builder builder = new Vocabulary.Query.Builder(termPrefix).
+        filterOn(filterOn.get()).
         categories(categories).
         prefixes(prefixes).
         includeDeprecated(includeDeprecated.get()).
@@ -219,25 +230,32 @@ public class VocabularyService extends BaseResource {
         includeAcronyms(searchAcronyms.get()).
         limit(1000);
     List<Concept> concepts = vocabulary.getConceptsFromPrefix(builder.build());
-    List<Completion> comps = getCompletions(builder.build(), concepts);
+    List<Completion> completions = getCompletions(builder.build(), concepts);
     // TODO: Move completions to scigraph-core for #51
-    sort(comps);
+    sort(completions);
 
+    Vocabulary.Query query = builder.build();
+    boolean filter = query.isFilterOn();
+    System.out.println("filter: " + filter);
     /**** Completion Filter ****/
-    List<String> alreadyIn = new ArrayList<String>(); // list of each concept 
-                                                      // for each completion
-    List<Completion> completions = new ArrayList<Completion>(); 
-    for (Completion comp : comps) {
-        System.out.println("completion: " + comp.getCompletion());
-        System.out.println("curie: " + comp.getConcept().getCurie());
-        System.out.println("filtered: " + alreadyIn.contains(comp.getConcept().getCurie()));
-        if(!alreadyIn.contains(comp.getConcept().getCurie())) { 
-            alreadyIn.add(comp.getConcept().getCurie());
-            completions.add(comp);
+    if (filter) {
+        List<String> alreadyIn = new ArrayList<String>(); // list of each concept 
+        List<Completion> comps = new ArrayList<Completion>(); 
+        
+        for (Completion comp : completions) {
+            System.out.println("curie: " + comp.getConcept().getCurie());
+            System.out.println("filtered: " + alreadyIn.contains(comp.getConcept().getCurie()));
+            System.out.println("completion: " + comp.getCompletion());
+            if(!alreadyIn.contains(comp.getConcept().getCurie())) { 
+                alreadyIn.add(comp.getConcept().getCurie());
+                comps.add(comp);
+            }
         }
+
+        completions = comps;
     }
     /**** Completion Filter ****/
-    
+    System.out.println("completions.size() = " + completions.size());
     int endIndex = limit.get() > completions.size() ? completions.size() : limit.get();
     completions = completions.subList(0, endIndex);
     return completions;
