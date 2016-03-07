@@ -20,6 +20,8 @@ import io.scigraph.neo4j.bindings.IndicatesCurieMapping;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 import javax.inject.Inject;
 
@@ -95,5 +97,9 @@ public class CurieUtil {
     }
     return Optional.absent();
   }
-
+ 
+  // ATORR 
+  public ImmutableBiMap getCurieMap(){
+    return curieMap;
+  }
 }

@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Map; // ATORR
 
 import com.google.common.base.Optional;
 
@@ -90,6 +91,11 @@ public interface Vocabulary {
    * @return a collection of all known CURIE prefixes
    */
   Set<String> getAllCuriePrefixes();
+  
+  /*** 
+   * @return a collection of all known CURIEs
+   */
+  Map<String, String> getMap();
 
   /***
    * Provides "did you mean" functionality based on the labels of concepts in the vocabulary.

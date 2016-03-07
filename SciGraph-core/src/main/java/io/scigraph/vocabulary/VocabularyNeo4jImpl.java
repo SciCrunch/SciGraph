@@ -311,6 +311,12 @@ public class VocabularyNeo4jImpl implements Vocabulary {
     return newHashSet(curieUtil.getPrefixes());
   }
 
+  //ATORR
+  @Override
+  public Map<String, String> getMap() {
+    return curieUtil.getCurieMap();
+  }
+
   @Override
   public List<String> getSuggestions(String query) {
     try {

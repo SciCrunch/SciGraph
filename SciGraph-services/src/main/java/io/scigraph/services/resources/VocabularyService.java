@@ -34,7 +34,7 @@ import io.scigraph.vocabulary.Vocabulary.Query;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator; // Atorr
+import java.util.Map; // Atorr
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -196,28 +196,20 @@ public class VocabularyService extends BaseResource {
   public List<Completion> findByPrefix(
       @ApiParam( value = "Term prefix to find", required = true )
       @PathParam("term") String termPrefix,
-      
       @ApiParam( value = DocumentationStrings.RESULT_LIMIT_DOC, required = false )
       @QueryParam("limit") @DefaultValue("20") IntParam limit,
-      
       @ApiParam( value = DocumentationStrings.SEARCH_SYNONYMS, required = false )
       @QueryParam("searchSynonyms") @DefaultValue("true") BooleanParam searchSynonyms,
-      
       @ApiParam( value = DocumentationStrings.SEARCH_ABBREVIATIONS, required = false )
       @QueryParam("searchAbbreviations") @DefaultValue("false") BooleanParam searchAbbreviations,
-      
       @ApiParam( value = DocumentationStrings.SEARCH_ACRONYMS, required = false )
       @QueryParam("searchAcronyms") @DefaultValue("false") BooleanParam searchAcronyms,
-      
       @ApiParam( value = DocumentationStrings.INCLUDE_DEPRECATED_CLASSES, required = false )
       @QueryParam("includeDeprecated") @DefaultValue("false") BooleanParam includeDeprecated,
-      
       @ApiParam( value = "Categories to search (defaults to all)", required = false )
       @QueryParam("category") List<String> categories,
-      
       @ApiParam( value = "CURIE prefixes to search (defaults to all)", required = false )
       @QueryParam("prefix") List<String> prefixes,
-      
       @ApiParam( value = "Completion filter flag", required = false )
       @QueryParam("filter") @DefaultValue("false") BooleanParam filterOn) {
     Vocabulary.Query.Builder builder = new Vocabulary.Query.Builder(termPrefix).
@@ -393,4 +385,16 @@ public class VocabularyService extends BaseResource {
     return prefixes;
   }
 
+  @GET
+  @Path("/curies")
+  @ApiOperation(value = "Get all CURIEs",
+  notes = "curies can be used to limit results",
+  response = Map.class,
+  responseContainer = "Map")
+  @Timed
+  @CacheControl(maxAge = 2, maxAgeUnit = TimeUnit.HOURS)
+  public Map<String, String> getCuries() {
+    System.out.println("getCuries");
+    return vocabulary.getMap();
+  }
 }
