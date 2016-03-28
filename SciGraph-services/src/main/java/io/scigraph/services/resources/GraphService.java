@@ -41,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.Map; // atorr
 
 import javax.inject.Inject;
 import javax.ws.rs.DefaultValue;
@@ -181,7 +182,14 @@ public class GraphService extends BaseResource {
       @QueryParam("project") @DefaultValue("*") Set<String> projection,
       @ApiParam(value = DocumentationStrings.JSONP_DOC, required = false )
       @QueryParam("callback") String callback) {
-    return getNeighborsFromMultipleRoots(newHashSet(id), depth, traverseBlankNodes, relationshipType, direction, projection, callback);
+    String relType = "";
+    if (relationshipType.isPresent()) relType = relationshipType.get();
+    if (relType.contains(":") && !relType.contains("http")) {
+        relType = curieToIRI(relationshipType.get()); 
+    }
+
+    Optional<String> result = Optional.of(relType);
+    return getNeighborsFromMultipleRoots(newHashSet(id), depth, traverseBlankNodes, result, direction, projection, callback);
   }
 
   @GET
@@ -269,6 +277,18 @@ public class GraphService extends BaseResource {
     List<String> propertyKeys = new ArrayList<>(api.getAllPropertyKeys());
     sort(propertyKeys);
     return JaxRsUtil.wrapJsonp(request.get(), new GenericEntity<List<String>>(propertyKeys) {}, callback);
+  }
+
+  /**
+   * Name: curieToIRI
+   * Parameter: String curie
+   * Return: String IRI
+   */
+  private String curieToIRI (String curie) {
+    Map<String, String> map = vocabulary.getMap();
+    String[] curieParts = curie.split(":");
+    String IRI = map.get(curieParts[0]) + curieParts[1];
+    return IRI;
   }
 
 }

@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Iterator;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -66,6 +67,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.index.IndexHits;
+import org.neo4j.helpers.collection.IteratorUtil; // atorr
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -161,7 +163,8 @@ public class VocabularyNeo4jImpl implements Vocabulary {
     String idQuery = StringUtils.strip(query.getInput(), "\"");
     idQuery = curieUtil.getIri(idQuery).or(idQuery);
     try (Transaction tx = graph.beginTx()) {
-      Node node = graph.index().getNodeAutoIndexer().getAutoIndex().get(CommonProperties.IRI, idQuery).getSingle();
+      //Node node = graph.index().getNodeAutoIndexer().getAutoIndex().get(CommonProperties.IRI, idQuery).getSingle();
+      Node node = IteratorUtil.firstOrNull((Iterator<Node>)graph.index().getNodeAutoIndexer().getAutoIndex().get(CommonProperties.IRI, idQuery));
       tx.success();
       Concept concept = null;
       if (null != node) {
