@@ -320,6 +320,11 @@ public class VocabularyNeo4jImpl implements Vocabulary {
     return curieUtil.getCurieMap();
   }
 
+  @Override 
+  public Optional<String> getCurieFromUtil(String IRI) {
+     return curieUtil.getCurie(IRI);
+  }
+
   @Override
   public List<String> getSuggestions(String query) {
     try {

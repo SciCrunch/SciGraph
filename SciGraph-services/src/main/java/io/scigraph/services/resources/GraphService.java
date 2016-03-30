@@ -125,7 +125,15 @@ public class GraphService extends BaseResource {
         throw new BadRequestException("Unknown relationship type: " + relationshipType.get());
       }
       try {
-        RelationshipType type = DynamicRelationshipType.withName(relationshipType.get());
+        RelationshipType type;
+        if (relationshipType.get().contains(":") && relationshipType.get().contains("http")) {
+            Optional<String> rType = vocabulary.getCurieFromUtil(relationshipType.get());
+            type = DynamicRelationshipType.withName(rType.get());
+        }
+
+        else
+            type = DynamicRelationshipType.withName(relationshipType.get());
+        
         Direction dir = Direction.valueOf(direction);
         types.add(new DirectedRelationshipType(type, dir));
       } catch (Exception e) {
@@ -188,8 +196,8 @@ public class GraphService extends BaseResource {
         relType = curieToIRI(relationshipType.get()); 
     }
 
-    Optional<String> result = Optional.of(relType);
-    return getNeighborsFromMultipleRoots(newHashSet(id), depth, traverseBlankNodes, result, direction, projection, callback);
+    relationshipType = Optional.of(relType);
+    return getNeighborsFromMultipleRoots(newHashSet(id), depth, traverseBlankNodes, relationshipType, direction, projection, callback);
   }
 
   @GET

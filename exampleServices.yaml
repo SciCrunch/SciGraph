@@ -31,22 +31,23 @@ graphConfiguration:
   #the graph. You can probably find these in advance by looking at
   #the namespaces portion of your ontology files.
   curies:
-    'BFO' : 'http://purl.obolibrary.org/obo/BFO_' # 
-    'BSPO' : 'http://purl.obolibrary.org/obo/BSPO_' #
+    'BFO' : 'http://purl.obolibrary.org/obo/BFO_'  
+    'BSPO' : 'http://purl.obolibrary.org/obo/BSPO_' 
     'CHEBI' : 'http://purl.obolibrary.org/obo/CHEBI_'
-    'CONT' : 'http://purl.org/dc/elements/1.1/contributor' #
-    'CORE' : 'http://purl.obolibrary.org/obo/core#' #
-    'DEP' : 'xmlns.com/foaf/0.1/depicted_by' #
+    'CONT' : 'http://purl.org/dc/elements/1.1/contributor' 
+    'CORE' : 'http://purl.obolibrary.org/obo/core#' 
+    'DEP' : 'xmlns.com/foaf/0.1/depicted_by' 
     'GO' : 'http://purl.obolibrary.org/obo/GO_'
-    'IAO' : 'http://purl.obolibrary.org/obo/IAO_' #
+    'IAO' : 'http://purl.obolibrary.org/obo/IAO_' 
     'OBO' : 'http://purl.obolibrary.org/obo/'
-    'OBOINOWL' : 'http://www.geneontology.org/formats/oboInOwl#' #
+    'OBOINOWL' : 'http://www.geneontology.org/formats/oboInOwl#' 
     'NCBITaxon' : 'http://purl.obolibrary.org/obo/NCBITaxon_'
-    'RDF' : 'http://www.w3.org/2000/01/rdf-schema#' #
-    'RO' : 'http://purl.obolibrary.org/obo/RO_' #
-    'UBERCORE' : 'http://purl.obolibrary.org/obo/uberon/core#' #
+    'NIFGA' : 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#'
+    'RDF' : 'http://www.w3.org/2000/01/rdf-schema#' 
+    'RO' : 'http://purl.obolibrary.org/obo/RO_' 
+    'UBERCORE' : 'http://purl.obolibrary.org/obo/uberon/core#' 
     'UBERON' : 'http://purl.obolibrary.org/obo/UBERON_'
-    'UBPROP' : 'http://purl.obolibrary.org/obo/UBPROP_' #
+    'UBPROP' : 'http://purl.obolibrary.org/obo/UBPROP_' 
   indexedNodeProperties:
     - label
     - fragment

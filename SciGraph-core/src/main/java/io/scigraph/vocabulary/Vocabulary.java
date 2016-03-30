@@ -96,6 +96,11 @@ public interface Vocabulary {
    * @return a collection of all known CURIEs
    */
   Map<String, String> getMap();
+  
+  /*** 
+   * @return a CURIE from a specific IRI
+   */
+  Optional<String> getCurieFromUtil(String IRI);
 
   /***
    * Provides "did you mean" functionality based on the labels of concepts in the vocabulary.
