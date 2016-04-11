@@ -20,6 +20,7 @@ import static com.google.common.collect.Sets.newHashSet;
 import io.scigraph.neo4j.DirectedRelationshipType;
 import io.scigraph.owlapi.OwlRelationships;
 import io.scigraph.owlapi.curies.AddCuries;
+import io.scigraph.owlapi.curies.CurieUtil;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -80,7 +81,7 @@ public class GraphApi {
   }
 
   @AddCuries
-  public Graph getNeighbors(Set<Node> nodes, int depth, Set<DirectedRelationshipType> types, final Optional<Predicate<Node>> includeNode) {
+  public Graph getNeighbors(Set<Node> nodes, int depth, Set<DirectedRelationshipType> types, final Optional<Predicate<Node>> includeNode, CurieUtil curieUtil) {
     TraversalDescription description = graphDb.traversalDescription()
         .depthFirst()
         .evaluator(Evaluators.toDepth(depth))
@@ -104,7 +105,7 @@ public class GraphApi {
     for (Path path: description.traverse(nodes)) {
       Relationship relationship = path.lastRelationship();
       if (null != relationship) {
-        TinkerGraphUtil.addEdge(graph, relationship);
+        TinkerGraphUtil.addEdge(graph, relationship, curieUtil);
       }
     }
     if (isEmpty(graph.getEdges())) { 

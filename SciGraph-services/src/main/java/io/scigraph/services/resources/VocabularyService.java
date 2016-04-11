@@ -395,6 +395,6 @@ public class VocabularyService extends BaseResource {
   @CacheControl(maxAge = 2, maxAgeUnit = TimeUnit.HOURS)
   public Map<String, String> getCuries() {
     System.out.println("getCuries");
-    return vocabulary.getMap();
+    return curieUtil.getCurieMap();
   }
 }

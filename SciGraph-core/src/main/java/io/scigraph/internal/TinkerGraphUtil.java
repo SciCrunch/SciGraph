@@ -18,6 +18,7 @@ package io.scigraph.internal;
 import static com.google.common.collect.Sets.newHashSet;
 import io.scigraph.frames.CommonProperties;
 import io.scigraph.frames.NodeProperties;
+import io.scigraph.owlapi.curies.CurieUtil;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -89,8 +90,22 @@ public final class TinkerGraphUtil {
       Vertex outVertex = addNode(graph, relationship.getStartNode());
       Vertex inVertex = addNode(graph, relationship.getEndNode());
       String label = relationship.getType().name();
-      // TODO #152 add CurieUtil to resolve IRI to Curie
       edge = graph.addEdge(relationship.getId(), outVertex, inVertex, label);
+      copyProperties(relationship, edge);
+    }
+    return edge;
+  }
+
+  static Edge addEdge(Graph graph, Relationship relationship, CurieUtil curieUtil) {
+    Edge edge = graph.getEdge(relationship.getId());
+    if (null == edge) {
+      Vertex outVertex = addNode(graph, relationship.getStartNode());
+      Vertex inVertex = addNode(graph, relationship.getEndNode());
+      Optional<String> label = curieUtil.getCurie(relationship.getType().name());
+      String input;
+      if (label.isPresent()) input = label.get();
+      else input = "";
+      edge = graph.addEdge(relationship.getId(), outVertex, inVertex, input);
       copyProperties(relationship, edge);
     }
     return edge;
@@ -263,5 +278,4 @@ public final class TinkerGraphUtil {
       }
     }
   }
-
 }

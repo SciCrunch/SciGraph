@@ -27,6 +27,7 @@ import io.scigraph.frames.Concept;
 import io.scigraph.internal.GraphApi;
 import io.scigraph.internal.TinkerGraphUtil;
 import io.scigraph.neo4j.DirectedRelationshipType;
+import io.scigraph.owlapi.curies.CurieUtil;
 import io.scigraph.owlapi.OwlLabels;
 import io.scigraph.services.api.graph.ArrayPropertyTransformer;
 import io.scigraph.services.jersey.BadRequestException;
@@ -75,6 +76,7 @@ import com.wordnik.swagger.annotations.ApiParam;
 @Api(value = "/graph", description = "Graph services")
 public class GraphService extends BaseResource {
 
+  private final CurieUtil curieUtil;
   private final Vocabulary vocabulary;
   private final GraphDatabaseService graphDb;
   private final GraphApi api;
@@ -84,6 +86,7 @@ public class GraphService extends BaseResource {
     this.vocabulary = vocabulary;
     this.graphDb = graphDb;
     this.api = api;
+    curieUtil = vocabulary.getCurieUtil();
   }
 
   @GET
@@ -125,14 +128,7 @@ public class GraphService extends BaseResource {
         throw new BadRequestException("Unknown relationship type: " + relationshipType.get());
       }
       try {
-        RelationshipType type;
-        if (relationshipType.get().contains(":") && relationshipType.get().contains("http")) {
-            Optional<String> rType = vocabulary.getCurieFromUtil(relationshipType.get());
-            type = DynamicRelationshipType.withName(rType.get());
-        }
-
-        else
-            type = DynamicRelationshipType.withName(relationshipType.get());
+        RelationshipType type = DynamicRelationshipType.withName(relationshipType.get());
         
         Direction dir = Direction.valueOf(direction);
         types.add(new DirectedRelationshipType(type, dir));
@@ -157,7 +153,7 @@ public class GraphService extends BaseResource {
           }};
           nodePredicate = Optional.of(predicate);
       }
-      tg = api.getNeighbors(newHashSet(nodes), depth.get(), types, nodePredicate);
+      tg = api.getNeighbors(newHashSet(nodes), depth.get(), types, nodePredicate, curieUtil);
       tx.success();
     }
     TinkerGraphUtil.project(tg, projection);
@@ -190,13 +186,12 @@ public class GraphService extends BaseResource {
       @QueryParam("project") @DefaultValue("*") Set<String> projection,
       @ApiParam(value = DocumentationStrings.JSONP_DOC, required = false )
       @QueryParam("callback") String callback) {
-    String relType = "";
-    if (relationshipType.isPresent()) relType = relationshipType.get();
-    if (relType.contains(":") && !relType.contains("http")) {
-        relType = curieToIRI(relationshipType.get()); 
+    if (relationshipType.isPresent()) {
+        String relType = relationshipType.get();
+        if (relType.contains(":") && !relType.contains("http")) 
+            relationshipType = curieUtil.getIri(relationshipType.get()); 
     }
 
-    relationshipType = Optional.of(relType);
     return getNeighborsFromMultipleRoots(newHashSet(id), depth, traverseBlankNodes, relationshipType, direction, projection, callback);
   }
 
@@ -286,17 +281,4 @@ public class GraphService extends BaseResource {
     sort(propertyKeys);
     return JaxRsUtil.wrapJsonp(request.get(), new GenericEntity<List<String>>(propertyKeys) {}, callback);
   }
-
-  /**
-   * Name: curieToIRI
-   * Parameter: String curie
-   * Return: String IRI
-   */
-  private String curieToIRI (String curie) {
-    Map<String, String> map = vocabulary.getMap();
-    String[] curieParts = curie.split(":");
-    String IRI = map.get(curieParts[0]) + curieParts[1];
-    return IRI;
-  }
-
 }

@@ -316,13 +316,8 @@ public class VocabularyNeo4jImpl implements Vocabulary {
 
   //ATORR
   @Override
-  public Map<String, String> getMap() {
-    return curieUtil.getCurieMap();
-  }
-
-  @Override 
-  public Optional<String> getCurieFromUtil(String IRI) {
-     return curieUtil.getCurie(IRI);
+  public CurieUtil getCurieUtil() {
+    return curieUtil;
   }
 
   @Override

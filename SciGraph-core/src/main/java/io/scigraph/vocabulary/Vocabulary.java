@@ -18,6 +18,7 @@ package io.scigraph.vocabulary;
 import static com.google.common.collect.Sets.newHashSet;
 import io.scigraph.frames.Concept;
 import io.scigraph.frames.NodeProperties;
+import io.scigraph.owlapi.curies.CurieUtil;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -95,13 +96,8 @@ public interface Vocabulary {
   /*** 
    * @return a collection of all known CURIEs
    */
-  Map<String, String> getMap();
+  CurieUtil getCurieUtil();
   
-  /*** 
-   * @return a CURIE from a specific IRI
-   */
-  Optional<String> getCurieFromUtil(String IRI);
-
   /***
    * Provides "did you mean" functionality based on the labels of concepts in the vocabulary.
    * @param query  a query string
