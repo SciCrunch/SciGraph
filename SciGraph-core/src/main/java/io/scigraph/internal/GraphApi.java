@@ -52,11 +52,13 @@ public class GraphApi {
 
   private final GraphDatabaseService graphDb;
   private final CypherUtil cypherUtil;
+  private final CurieUtil curieUtil;
 
   @Inject
-  public GraphApi(GraphDatabaseService graphDb, CypherUtil cypherUtil) {
+  public GraphApi(GraphDatabaseService graphDb, CypherUtil cypherUtil, CurieUtil curieUtil) {
     this.graphDb = graphDb;
     this.cypherUtil = cypherUtil;
+    this.curieUtil = curieUtil;
   }
 
   /***
@@ -81,7 +83,7 @@ public class GraphApi {
   }
 
   @AddCuries
-  public Graph getNeighbors(Set<Node> nodes, int depth, Set<DirectedRelationshipType> types, final Optional<Predicate<Node>> includeNode, CurieUtil curieUtil) {
+  public Graph getNeighbors(Set<Node> nodes, int depth, Set<DirectedRelationshipType> types, final Optional<Predicate<Node>> includeNode) {
     TraversalDescription description = graphDb.traversalDescription()
         .depthFirst()
         .evaluator(Evaluators.toDepth(depth))

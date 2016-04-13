@@ -153,7 +153,7 @@ public class GraphService extends BaseResource {
           }};
           nodePredicate = Optional.of(predicate);
       }
-      tg = api.getNeighbors(newHashSet(nodes), depth.get(), types, nodePredicate, curieUtil);
+      tg = api.getNeighbors(newHashSet(nodes), depth.get(), types, nodePredicate);
       tx.success();
     }
     TinkerGraphUtil.project(tg, projection);
