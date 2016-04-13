@@ -61,6 +61,12 @@ public class GraphApi {
     this.curieUtil = curieUtil;
   }
 
+  public GraphApi(GraphDatabaseService graphDb, CypherUtil cypherUtil) {
+    this.graphDb = graphDb;
+    this.cypherUtil = cypherUtil;
+    this.curieUtil = null;
+  }
+
   /***
    * @param parent
    * @param relationship
@@ -107,7 +113,8 @@ public class GraphApi {
     for (Path path: description.traverse(nodes)) {
       Relationship relationship = path.lastRelationship();
       if (null != relationship) {
-        TinkerGraphUtil.addEdge(graph, relationship, curieUtil);
+        if (null != curieUtil) TinkerGraphUtil.addEdge(graph, relationship, curieUtil);
+        else TinkerGraphUtil.addEdge(graph, relationship);
       }
     }
     if (isEmpty(graph.getEdges())) { 
