@@ -180,7 +180,7 @@ public final class TinkerGraphUtil {
     }
   }
 
-  static void addGraph(Graph graph, Graph addition) {
+  public static void addGraph(Graph graph, Graph addition) {
     for (Vertex vertex : addition.getVertices()) {
       addElement(graph, vertex);
     }

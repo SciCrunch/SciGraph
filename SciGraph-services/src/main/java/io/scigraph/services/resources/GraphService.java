@@ -129,7 +129,6 @@ public class GraphService extends BaseResource {
       }
       try {
         RelationshipType type = DynamicRelationshipType.withName(relationshipType.get());
-        
         Direction dir = Direction.valueOf(direction);
         types.add(new DirectedRelationshipType(type, dir));
       } catch (Exception e) {
@@ -281,4 +280,5 @@ public class GraphService extends BaseResource {
     sort(propertyKeys);
     return JaxRsUtil.wrapJsonp(request.get(), new GenericEntity<List<String>>(propertyKeys) {}, callback);
   }
+  
 }
