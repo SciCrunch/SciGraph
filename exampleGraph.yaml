@@ -2,7 +2,7 @@ graphConfiguration:
     # The location of the graph.
     # If this location does not exist it will be created.
     # Loading will append content to existing graphs.
-    location: /tmp/devGraph1
+    location: /tmp/devGraph2
     neo4jConfig:
       dump_configuration : true
       dbms.pagecache.memory : 1G

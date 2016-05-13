@@ -76,9 +76,9 @@ public class CurieUtilTest {
     assertThat(util.getCurie("http://none.org/none"), is(Optional.<String>absent()));
   }
 
-  @Test
+  /*@Test
   public void getMap() {
     assertThat(util.getCurieMap(), is(map));
-  }
+  }*/
 
 }

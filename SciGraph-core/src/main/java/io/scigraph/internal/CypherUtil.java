@@ -20,6 +20,7 @@ import static com.google.common.collect.Collections2.transform;
 import static com.google.common.collect.Iterables.getFirst;
 import static com.google.common.collect.Sets.newHashSet;
 import io.scigraph.owlapi.curies.CurieUtil;
+import io.scigraph.internal.TinkerGraphUtil;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -37,10 +38,13 @@ import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
+import com.tinkerpop.blueprints.Graph;
+import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
@@ -128,6 +132,26 @@ public class CypherUtil {
       }
     }
     return entailedTypes;
+  }
+
+  public Graph getNodes(String iri, int count) {
+    Graph graph = new TinkerGraph();
+    Map<String, Object> params = new HashMap<>();
+    params.put("iri", iri);
+    String query = "MATCH (n) WHERE n.iri =~ \"" + iri + "\" RETURN n LIMIT " 
+                                                 + String.valueOf(count);
+    System.out.println(query);
+    try (Transaction tx = graphDb.beginTx()) {
+      Result result = graphDb.execute(query, params);
+      while (result.hasNext()) {
+        Map<String, Object> map = result.next();
+        for (String key : map.keySet()) {
+	  TinkerGraphUtil.addElement(graph, (Node) map.get(key));
+	}
+      }
+      tx.success();
+    }
+    return graph;  
   }
 
   Collection<String> resolveTypes(String types, boolean entail) {

@@ -4,67 +4,199 @@ server:
   adminContextPath: /admin
   connector:
     type: http
-    port: 9000
-  #connector:
-    #type: https
-    #port: 9000
-    #trustStorePath: /path/to/my.truststure
-    #trustStorePassword: '123456'
-    #keyStorePath: /path/to/my.keystore
-    #keyStorePassword: '123456'
+    port: 9002
 
 logging:
   level: INFO
+  
+applicationContextPath: scigraph 
+
+apiConfiguration:
+  apikeyParameter: apikey
+  defaultApikey: default
+  authenticationCachePolicy: maximumSize=10000, expireAfterAccess=10m
+  authenticationQuery: select APIKEY from USERS where APIKEY = ?
+  roleQuery: select ROLES from USERS where APIKEY = ?
+  permissionQuery: select PERMISSION from ROLES where ROLE = ?
+  authDataSourceFactory:
+    # the name of your JDBC driver
+    driverClass: org.hsqldb.jdbc.JDBCDriver
+
+    # the username
+    user: SA
+
+    # the password
+    password: password
+
+    # the JDBC URL
+    url: jdbc:hsqldb:res:/users/users
+
+    # any properties specific to your JDBC driver:
+    properties:
+      charSet: UTF-8
+
+    # the maximum amount of time to wait on an empty pool before throwing an exception
+    maxWaitForConnection: 1s
+
+    # the SQL query to run when validating a connections liveness
+    validationQuery: /* MyService Health Check */ SELECT 1 FROM INFORMATION_SCHEMA.SYSTEM_USERS
+
+    # the minimum number of connections to keep open
+    minSize: 8
+
+    # the maximum number of connections to keep open
+    maxSize: 32
+
+    # whether or not idle connections should be validated
+    checkConnectionWhileIdle: false
 
 graphConfiguration:
-  #it is possible to load 10 graphs and then choose only 1 of them to run services for
-  location: /tmp/devGraph1
-  neo4jConfig:
-    dump_configuration : true
-    dbms.pagecache.memory : 1G
-  #The curies section defines the shortened IRI representation
-  #use within scigraph for ontology identifiers.
-  #Normally this would be sourced from an external file such as
-  #https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/scigraph/nifstd_curie_map.yaml
-  #and this services yaml file would be generated on the fly
-  #You should have curies for every IRI prefix that will appear in
-  #the graph. You can probably find these in advance by looking at
-  #the namespaces portion of your ontology files.
-  curies:
-    'BFO' : 'http://purl.obolibrary.org/obo/BFO_' 
-    'BIRNANN': 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#'
-    'BSPO' : 'http://purl.obolibrary.org/obo/BSPO_' 
-    'CHEBI' : 'http://purl.obolibrary.org/obo/CHEBI_'
-    'CONT' : 'http://purl.org/dc/elements/1.1/contributor' 
-    'CORE' : 'http://purl.obolibrary.org/obo/core#' 
-    'DEP' : 'xmlns.com/foaf/0.1/depicted_by'
-    'DOID': 'http://purl.obolibrary.org/obo/DOID_' 
-    'GO' : 'http://purl.obolibrary.org/obo/GO_'
-    'IAO' : 'http://purl.obolibrary.org/obo/IAO_' 
-    'NCBITaxon' : 'http://purl.obolibrary.org/obo/NCBITaxon_'
-    'NIFGA' : 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#'
-    'OBO' : 'http://purl.obolibrary.org/obo/'
-    'OBOINOWL' : 'http://www.geneontology.org/formats/oboInOwl#' 
-    'RDF' : 'http://www.w3.org/2000/01/rdf-schema#' 
-    'RO' : 'http://purl.obolibrary.org/obo/RO_' 
-    'UBERCORE' : 'http://purl.obolibrary.org/obo/uberon/core#' 
-    'UBERON' : 'http://purl.obolibrary.org/obo/UBERON_'
-    'UBPROP' : 'http://purl.obolibrary.org/obo/UBPROP_' 
+  location: /var/scigraph-services/atorr_graph 
   indexedNodeProperties:
     - label
-    - fragment
-    - curie
-    - definition
     - synonym
+    - curie
     - acronym
     - abbreviation
+
   exactNodeProperties:
     - label
-    - fragment
-    - curie
-    - definition
     - synonym
     - acronym
     - abbreviation
-    - deprecated
 
+  neo4jConfig:
+    dump_configuration : true
+    dbms.pagecache.memory : 4g
+  curies:
+    # base
+    '': 'http://uri.neuinfo.org/nif/nifstd/'
+    
+    # interlex
+    'ILX': 'http://uri.interlex.org/base/ilx_'
+    
+    # scicrunch registry
+    'SCR': 'http://scicrunch.org/resolver/SCR_'
+    
+    # ontologies
+    'HP': 'http://purl.obolibrary.org/obo/HP_'
+    'RO': 'http://purl.obolibrary.org/obo/RO_'
+    'OBO': 'http://purl.obolibrary.org/obo/'
+    'OIO': 'http://www.geneontology.org/formats/oboInOwl#'
+    'IAO': 'http://purl.obolibrary.org/obo/IAO_'
+    'SO' : 'http://purl.obolibrary.org/obo/SO_'
+    'BFO': 'http://purl.obolibrary.org/obo/BFO_'
+    'DOID': 'http://purl.obolibrary.org/obo/DOID_'
+    'DOID2': 'http://purl.obolibrary.org/obo/DOID#DOID_'
+    'PATO': 'http://purl.obolibrary.org/obo/PATO_'
+    'PATO2': 'http://purl.obolibrary.org/obo/PATO#PATO_'  #AAAAAAAAAAA
+    'PATO3': 'http://purl.org/obo/owl/PATO#PATO_'  #AAAAAAAAAAAAAAAAAA
+    'PR': 'http://purl.obolibrary.org/obo/PR_' 
+    'PW' : 'http://purl.obolibrary.org/obo/PW_'
+    'CL' : 'http://purl.obolibrary.org/obo/CL_'
+    'CLO' : 'http://purl.obolibrary.org/obo/CLO_'
+    'GO' : 'http://purl.obolibrary.org/obo/GO_'
+    'SIO' : 'http://semanticscience.org/resource/SIO_'
+    'EFO' : 'http://www.ebi.ac.uk/efo/EFO_'
+    'UBERON' : 'http://purl.obolibrary.org/obo/UBERON_'
+    'ERO' : 'http://purl.obolibrary.org/obo/ERO_'
+    'NCBIGene' : 'http://www.ncbi.nlm.nih.gov/gene/'
+    'NCBITaxon' : 'http://purl.obolibrary.org/obo/NCBITaxon_'
+    'NCBITaxon2' : 'http://purl.org/obo/owl/NCBITaxon#NCBITaxon_'
+    'UO': 'http://purl.obolibrary.org/obo/UO_'
+    'OLD_CHEBI': 'http://purl.obolibrary.org/obo/chebi.owl#CHEBI_'
+    'FMA': 'http://purl.org/sig/ont/fma/fma'
+    'MBA': 'http://api.brain-map.org/api/v2/data/Structure/'
+    
+    # NIF Import closure
+    'BIRNANN': 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#'
+    'BIRNOBI': 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex-OBI-proxy.owl#'
+    'BIRNOBO': 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex-OBO-UBO.owl#'
+    'NIFBE': 'http://ontology.neuinfo.org/NIF/Backend/nif_backend.owl#'
+    'NIFQUAL': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#'
+    'OBOANN': 'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#'
+    'NIFANN': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Annotation-Standard.owl#'
+    'NIFCELL': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Cell.owl#'
+    'NIFCHEM': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Chemical.owl#'
+    'NIFGA': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#'
+    'NIFMOL': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Molecule.owl#'
+    'NIFORG': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Organism.owl#'
+    'NIFSUB': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Subcellular.owl#'
+    'NIFUNCL': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Unclassified.owl#'
+    'SAOCORE': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/SAO-CORE_properties.owl#'
+    'NIFGG': 'http://ontology.neuinfo.org/NIF/DigitalEntities/NIF-Government-Granting-Agency.owl#'
+    'NIFINV': 'http://ontology.neuinfo.org/NIF/DigitalEntities/NIF-Investigation.owl#'
+    'NIFRES': 'http://ontology.neuinfo.org/NIF/DigitalEntities/NIF-Resource.owl#'
+    'NIFSCID': 'http://ontology.neuinfo.org/NIF/DigitalEntities/NIF-Scientific-Discipline.owl#'
+    'NIFDYS': 'http://ontology.neuinfo.org/NIF/Dysfunction/NIF-Dysfunction.owl#'
+    'NIFFUN': 'http://ontology.neuinfo.org/NIF/Function/NIF-Function.owl#'
+    'NEMOANN': 'http://purl.bioontology.org/NEMO/ontology/NEMO_annotation_properties.owl'
+    'NEMO': 'http://purl.bioontology.org/NEMO/ontology/NEMO.owl#NEMO_'
+    'BFO1': 'http://www.ifomis.org/bfo/1.1'
+    'COGAT': 'http://www.cognitiveatlas.org/ontology/cogat.owl#'
+    'COGPO': 'http://www.cogpo.org/ontologies/COGPO_'  # doesn't resolve
+    
+    # Inferred or Slim 
+    'NIFMOLINF': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Molecule-Role-Inferred.owl#'
+    'NIFNCBISLIM': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-NCBITaxonomy-Slim.owl#'
+    
+    # Bridge
+    'QUALBB': 'http://ontology.neuinfo.org/NIF/Backend/quality_bfo_bridge.owl#'
+    'NIFNEURON': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF_Neuron_MolecularConstituent_Bridge.owl#'
+    'NIFERO': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Eagle-I-Bridge.owl#'
+    'NIFGOCC': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GO-CC-Bridge.owl#'
+    'NIFMOLROLE': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Molecule-Role-Bridge.owl#'
+    'NIFNCBI': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-NCBITax-Bridge.owl#'
+    'NIFNEURBR': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-BrainRegion-Bridge.owl#'
+    'NIFNEURBR2': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-Brain-Bridge.owl#'  #AAAAAAAA FIXME
+    'NIFNEURCIR': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-Circuit-Role-Bridge.owl#'
+    'NIFNEURMOR': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-Morphology-Bridge.owl#'
+    'NIFNEURNT': 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-NT-Bridge.owl#'
+    
+
+serviceMetadata:
+  name: 'NIF Reconciliation Service'
+  identifierSpace: http://neuinfo.org/
+  schemaSpace: http://neuinfo.org/
+  view: {
+    url: 'http://matrix.neuinfo.org:9000/scigraph/refine/view/{{id}}'
+  }
+  preview: {
+    url: 'http://matrix.neuinfo.org:9000/scigraph/refine/preview/{{id}}',
+    width: 400,
+    height: 400
+  }
+
+cypherResources:
+        - path: /dynamic/Test
+          query: |
+                MATCH (n)
+                WHERE n.iri =~ "uri.interlex.org/base/ilx_.*"
+                RETURN n
+                LIMIT 10
+
+          operations:
+                - summary: Get 5 nodes
+        
+        - path: /dynamic/Test2
+          query: |
+                MATCH (n)
+                WHERE n.iri =~ 'http://purl.obolibrary.org/obo/UBERON.*'
+                RETURN n
+                LIMIT 10
+
+          operations:
+                - summary: Get this node
+        
+        - path: /dynamic/Entities/{id}
+          query: |
+                MATCH (n)
+                WHERE n.iri =~ {id}
+                RETURN n
+                LIMIT 20
+          operations:
+                - summary: Get all Classes and Entities of a given curie id
+                  parameters: 
+                        - name: id
+                          description: curie prefix 
+                  
