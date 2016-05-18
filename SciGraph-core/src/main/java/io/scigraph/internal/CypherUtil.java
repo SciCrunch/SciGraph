@@ -134,12 +134,29 @@ public class CypherUtil {
     return entailedTypes;
   }
 
-  public Graph getNodes(String iri, int count) {
+  public Graph getNodesByIri(String iri, int count, int skip) {
     Graph graph = new TinkerGraph();
     Map<String, Object> params = new HashMap<>();
     params.put("iri", iri);
-    String query = "MATCH (n) WHERE n.iri =~ \"" + iri + "\" RETURN n LIMIT " 
-                                                 + String.valueOf(count);
+    String query = "MATCH (n) WHERE n.iri =~ \"" + iri + "\" RETURN n ORDER BY n.iri SKIP " + skip + " LIMIT " + String.valueOf(count);
+    System.out.println(query);
+    try (Transaction tx = graphDb.beginTx()) {
+      Result result = graphDb.execute(query, params);
+      while (result.hasNext()) {
+        Map<String, Object> map = result.next();
+        for (String key : map.keySet()) {
+	  TinkerGraphUtil.addElement(graph, (Node) map.get(key));
+	}
+      }
+      tx.success();
+    }
+    return graph;  
+  }
+
+  public Graph getNodesUnfiltered(int count, int skip){
+    Graph graph = new TinkerGraph();
+    Map<String, Object> params = new HashMap<>();
+    String query = "MATCH (n) RETURN n ORDER BY n.iri SKIP " + skip + " LIMIT " + String.valueOf(count);
     System.out.println(query);
     try (Transaction tx = graphDb.beginTx()) {
       Result result = graphDb.execute(query, params);

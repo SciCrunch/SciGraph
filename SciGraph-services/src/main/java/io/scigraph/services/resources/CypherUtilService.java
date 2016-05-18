@@ -90,23 +90,45 @@ public class CypherUtilService extends BaseResource {
   }
 
   @GET
-  @Path("/entities")
-  @ApiOperation(value = "Get the curie map", response = String.class, responseContainer = "Map")
+  @Path("/entities/{id}")
+  @ApiOperation(value = "Return entity list filtered by curie", response = String.class, responseContainer = "Map")
   @Timed
   @CacheControl(maxAge = 2, maxAgeUnit = TimeUnit.HOURS)
   @Produces({ MediaType.APPLICATION_JSON, CustomMediaTypes.APPLICATION_GRAPHSON,
     MediaType.APPLICATION_XML, CustomMediaTypes.APPLICATION_GRAPHML, CustomMediaTypes.APPLICATION_XGMML,
     CustomMediaTypes.TEXT_GML, CustomMediaTypes.TEXT_CSV, CustomMediaTypes.TEXT_TSV,
     CustomMediaTypes.IMAGE_JPEG, CustomMediaTypes.IMAGE_PNG})
-  public Object getEntities(
-  	@ApiParam(value = DocumentationStrings.JSONP_DOC, required = false) 
-	@QueryParam("curie") String curie,
-  	@ApiParam(value = DocumentationStrings.JSONP_DOC, required = false) 
-	@QueryParam("limit") @DefaultValue("20") int limit) {
+  public Object getEntitiesFiltered(
+  	@ApiParam(value = "input curie for graph query", required = false) 
+	@QueryParam("curie") String id,
+  	@ApiParam(value = "limit on the number of nodes to be returned", required = false) 
+	@QueryParam("limit") @DefaultValue("20") int limit,
+	@ApiParam(value = "skips the first few nodes ordered by id", required = false)
+	@QueryParam("offset") @DefaultValue("0") int skip) {
 	Map<String, String> map = cypherUtil.getCurieMap();
-	System.out.println("---- iri is : " + map.get(curie) + " ----");
-	String iri = map.get(curie) + ".*";
-	Graph graph = cypherUtil.getNodes(iri, limit); 
+	System.out.println("---- iri is : " + map.get(id) + " ----");
+	String iri = map.get(id) + ".*";
+	Graph graph = cypherUtil.getNodesByIri(iri, limit, skip); 
+	ArrayPropertyTransformer.transform(graph);
+        return JaxRsUtil.wrapJsonp(request.get(), new GenericEntity<Graph>(graph) {}, null);
+  }
+
+  @GET
+  @Path("/entities")
+  @ApiOperation(value = "Return unfiltered entity list", response = String.class, responseContainer = "Map")
+  @Timed
+  @CacheControl(maxAge = 2, maxAgeUnit = TimeUnit.HOURS)
+  @Produces({ MediaType.APPLICATION_JSON, CustomMediaTypes.APPLICATION_GRAPHSON,
+    MediaType.APPLICATION_XML, CustomMediaTypes.APPLICATION_GRAPHML, CustomMediaTypes.APPLICATION_XGMML,
+    CustomMediaTypes.TEXT_GML, CustomMediaTypes.TEXT_CSV, CustomMediaTypes.TEXT_TSV,
+    CustomMediaTypes.IMAGE_JPEG, CustomMediaTypes.IMAGE_PNG})
+  public Object getEntitiesUnfiltered(
+  	@ApiParam(value = "limit on the number of nodes to be returned", required = false) 
+	@QueryParam("limit") @DefaultValue("20") int limit,
+	@ApiParam(value = "skips the first few nodes ordered by id", required = false)
+	@QueryParam("offset") @DefaultValue("0") int skip) {
+	Map<String, String> map = cypherUtil.getCurieMap();
+	Graph graph = cypherUtil.getNodesUnfiltered(limit, skip); 
 	ArrayPropertyTransformer.transform(graph);
         return JaxRsUtil.wrapJsonp(request.get(), new GenericEntity<Graph>(graph) {}, null);
   }
