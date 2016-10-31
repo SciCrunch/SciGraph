@@ -16,14 +16,22 @@
 package io.scigraph.services.resources;
 
 import io.dropwizard.jersey.caching.CacheControl;
+import io.dropwizard.jersey.params.IntParam;
 import io.scigraph.internal.CypherUtil;
 import io.scigraph.services.jersey.BaseResource;
 import io.scigraph.services.jersey.JaxRsUtil;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -31,7 +39,20 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.MediaType;
 
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.guard.Guard;
+import org.neo4j.kernel.guard.GuardException;
+
 import com.codahale.metrics.annotation.Timed;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.wordnik.swagger.annotations.Api;
 import com.wordnik.swagger.annotations.ApiOperation;
 import com.wordnik.swagger.annotations.ApiParam;
@@ -42,23 +63,23 @@ import com.wordnik.swagger.annotations.ApiParam;
 public class CypherUtilService extends BaseResource {
 
   final private CypherUtil cypherUtil;
+  final private GraphDatabaseService graphDb;
 
   @Inject
-  CypherUtilService(CypherUtil cypherUtil) {
+  CypherUtilService(CypherUtil cypherUtil, GraphDatabaseService graphDb) {
     this.cypherUtil = cypherUtil;
+    this.graphDb = graphDb;
   }
 
   @GET
   @Timed
   @Produces({MediaType.TEXT_PLAIN})
   @Path("/resolve")
-  @ApiOperation(
-      value = "Cypher query resolver",
-      response = String.class,
-      notes = "Only resolves curies of the relationships, not the ones in the nodes or in the START.")
+  @ApiOperation(value = "Cypher query resolver", response = String.class,
+      notes = "Resolves curies and relationships.")
   public String resolve(
       @ApiParam(value = "The cypher query to resolve", required = true) @QueryParam("cypherQuery") String cypherQuery) {
-    return cypherUtil.resolveRelationships(cypherQuery);
+    return cypherUtil.resolveRelationships(cypherUtil.resolveStartQuery(cypherQuery));
   }
 
 
@@ -74,4 +95,156 @@ public class CypherUtilService extends BaseResource {
         new GenericEntity<Map<String, String>>(cypherUtil.getCurieMap()) {}, callback);
   }
 
+  @GET
+  @Path("/execute")
+  @ApiOperation(
+      value = "Execute an arbitrary Cypher query.",
+      response = String.class,
+      notes = "The graph is in read-only mode, this service will fail with queries which alter the graph, like CREATE, DELETE or REMOVE. Example: START n = node:node_auto_index(iri='DOID:4') match (n) return n")
+  @Timed
+  @CacheControl(maxAge = 2, maxAgeUnit = TimeUnit.HOURS)
+  @Produces({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
+  public String execute(
+      @ApiParam(value = "The cypher query to execute", required = true) @QueryParam("cypherQuery") String cypherQuery,
+      @ApiParam(value = "Limit", required = true) @QueryParam("limit") @DefaultValue("10") IntParam limit)
+      throws IOException {
+    int timeoutMinutes = 5;
+
+
+    String sanitizedCypherQuery = cypherQuery.replaceAll(";", "") + " LIMIT " + limit;
+    String replacedStartCurie = cypherUtil.resolveStartQuery(sanitizedCypherQuery);
+    Guard guard =
+        ((GraphDatabaseAPI) graphDb).getDependencyResolver().resolveDependency(Guard.class);
+
+    guard.startTimeout(timeoutMinutes * 60 * 1000);
+
+    try {
+      if (JaxRsUtil.getVariant(request.get()) != null
+          && JaxRsUtil.getVariant(request.get()).getMediaType() == MediaType.APPLICATION_JSON_TYPE) {
+        try (Transaction tx = graphDb.beginTx()) {
+          Result result = cypherUtil.execute(replacedStartCurie);
+          // System.out.println(result.resultAsString());
+          StringWriter writer = new StringWriter();
+          JsonGenerator generator = new JsonFactory().createGenerator(writer);
+          generator.writeStartArray();
+          while (result.hasNext()) {
+            Map<String, Object> row = result.next();
+            generator.writeStartObject();
+            for (Entry<String, Object> entry : row.entrySet()) {
+              String key = entry.getKey();
+              Object value = entry.getValue();
+              resultSerializer(generator, key, value);
+            }
+            generator.writeEndObject();
+          }
+          generator.writeEndArray();
+          generator.close();
+
+          tx.close();
+          return writer.toString();
+        }
+      } else {
+        return cypherUtil.execute(replacedStartCurie).resultAsString();
+      }
+    } catch (GuardException e) {
+      return "The query execution exceeds " + timeoutMinutes
+          + " minutes. Consider using the neo4j shell instead of this service.";
+    } finally {
+      guard.stop();
+    }
+  }
+
+  // TODO similar to ResultSerializer.java from golrLoader
+  private void resultSerializer(JsonGenerator generator, String fieldName, Object value)
+      throws IOException {
+    if (value instanceof Node) {
+      Node n = (Node) value;
+
+      generator.writeFieldName(fieldName);
+
+      nodeGeneration(generator, n);
+    } else if (value instanceof Relationship) {
+      Relationship r = (Relationship) value;
+
+      generator.writeFieldName(fieldName);
+
+      relationshipGeneration(generator, r);
+    } else if (value instanceof org.neo4j.graphdb.Path) {
+      org.neo4j.graphdb.Path p = (org.neo4j.graphdb.Path) value;
+
+      Iterator<Node> nodes = p.nodes().iterator();
+      Iterator<Relationship> relationships = p.relationships().iterator();
+
+      generator.writeFieldName(fieldName);
+      generator.writeStartObject();
+
+      generator.writeArrayFieldStart("details");
+      while (nodes.hasNext()) {
+        Node n = nodes.next();
+        nodeGeneration(generator, n);
+        if (relationships.hasNext()) {
+          relationshipGeneration(generator, relationships.next());
+        }
+      }
+      generator.writeEndArray();
+
+      generator.writeStringField("overview", p.toString());
+
+      generator.writeEndObject();
+
+    } else if (value instanceof String) {
+      generator.writeStringField(fieldName, (String) value);
+    } else if (value instanceof Boolean) {
+      generator.writeBooleanField(fieldName, (Boolean) value);
+    } else if (value instanceof Integer) {
+      generator.writeNumberField(fieldName, (Integer) value);
+    } else if (value instanceof Long) {
+      generator.writeNumberField(fieldName, (Long) value);
+    } else if (value instanceof Float) {
+      generator.writeNumberField(fieldName, (Float) value);
+    } else if (value instanceof Double) {
+      generator.writeNumberField(fieldName, (Double) value);
+    } else if (value instanceof Iterable) {
+      generator.writeArrayFieldStart(fieldName);
+      for (String v : (List<String>) value) {
+        generator.writeString(v);
+      }
+      generator.writeEndArray();
+    } else if (value.getClass().isArray()) {
+      List<String> arr = Arrays.asList((String[]) value);
+      generator.writeArrayFieldStart(fieldName);
+      for (String v : arr) {
+        generator.writeString(v);
+      }
+      generator.writeEndArray();
+    } else {
+      throw new IllegalArgumentException("Don't know how to serialize " + value.getClass());
+    }
+  }
+
+  private void nodeGeneration(JsonGenerator generator, Node node) throws IOException {
+    generator.writeStartObject();
+    for (String k : node.getPropertyKeys()) {
+      resultSerializer(generator, k, node.getProperty(k));
+    }
+
+    generator.writeArrayFieldStart("Neo4jLabel");
+    for (Label l : node.getLabels()) {
+      generator.writeString(l.name());
+    }
+    generator.writeEndArray();
+
+    generator.writeEndObject();
+  }
+
+
+  private void relationshipGeneration(JsonGenerator generator, Relationship relationship)
+      throws IOException {
+    generator.writeStartObject();
+    generator.writeStringField("type", relationship.getType().name());
+    for (String k : relationship.getPropertyKeys()) {
+      resultSerializer(generator, k, relationship.getProperty(k));
+    }
+    generator.writeEndObject();
+  }
 }
