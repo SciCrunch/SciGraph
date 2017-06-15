@@ -18,13 +18,6 @@ package io.scigraph.neo4j;
 import static com.google.common.collect.Collections2.transform;
 import static com.google.common.collect.Sets.newHashSet;
 import static java.lang.String.format;
-import io.scigraph.frames.CommonProperties;
-import io.scigraph.lucene.LuceneUtils;
-import io.scigraph.lucene.VocabularyIndexAnalyzer;
-import io.scigraph.neo4j.bindings.IndicatesCurieMapping;
-import io.scigraph.neo4j.bindings.IndicatesNeo4jGraphLocation;
-import io.scigraph.vocabulary.Vocabulary;
-import io.scigraph.vocabulary.VocabularyNeo4jImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,25 +25,39 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Singleton;
 
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.graphdb.index.AutoIndexer;
 import org.neo4j.graphdb.index.IndexManager;
+import org.neo4j.graphdb.schema.IndexDefinition;
+import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.configuration.Settings;
 
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+
+import io.scigraph.frames.CommonProperties;
+import io.scigraph.lucene.LuceneUtils;
+import io.scigraph.lucene.VocabularyIndexAnalyzer;
+import io.scigraph.neo4j.bindings.IndicatesCurieMapping;
+import io.scigraph.neo4j.bindings.IndicatesNeo4jGraphLocation;
+import io.scigraph.vocabulary.Vocabulary;
+import io.scigraph.vocabulary.VocabularyNeo4jImpl;
+import org.prefixcommons.CurieUtil;
 
 public class Neo4jModule extends AbstractModule {
 
@@ -71,8 +78,9 @@ public class Neo4jModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(String.class).annotatedWith(IndicatesNeo4jGraphLocation.class).toInstance(
-        configuration.getLocation());
+    bind(String.class).annotatedWith(IndicatesNeo4jGraphLocation.class)
+        .toInstance(configuration.getLocation());
+    bind(CurieUtil.class).toInstance(new CurieUtil(configuration.getCuries()));
     bind(new TypeLiteral<Map<String, String>>() {}).annotatedWith(IndicatesCurieMapping.class)
         .toInstance(configuration.getCuries());
     bind(Vocabulary.class).to(VocabularyNeo4jImpl.class).in(Singleton.class);
@@ -87,6 +95,7 @@ public class Neo4jModule extends AbstractModule {
       index.startAutoIndexingProperty(property);
     }
     index.setEnabled(true);
+
   }
 
   public static void setupAutoIndexing(GraphDatabaseService graphDb, Neo4jConfiguration config) {
@@ -94,8 +103,8 @@ public class Neo4jModule extends AbstractModule {
       graphDb.index().forNodes("node_auto_index", INDEX_CONFIG);
       Set<String> indexProperties = newHashSet(CommonProperties.IRI);
       indexProperties.addAll(config.getIndexedNodeProperties());
-      indexProperties.addAll(transform(config.getExactNodeProperties(),
-          new Function<String, String>() {
+      indexProperties
+          .addAll(transform(config.getExactNodeProperties(), new Function<String, String>() {
             @Override
             public String apply(String index) {
               return index + LuceneUtils.EXACT_SUFFIX;
@@ -103,6 +112,26 @@ public class Neo4jModule extends AbstractModule {
           }));
       setupIndex(graphDb.index().getNodeAutoIndexer(), indexProperties);
       tx.success();
+    }
+  }
+
+  public static void setupSchemaIndexes(GraphDatabaseService graphDb, Neo4jConfiguration config) {
+    Map<String, Set<String>> schemaIndexes = config.getSchemaIndexes();
+    for (Map.Entry<String, Set<String>> entry : schemaIndexes.entrySet()) {
+      Label label = Label.label(entry.getKey());
+      for (String property : entry.getValue()) {
+        try (Transaction tx = graphDb.beginTx()) {
+          Schema schema = graphDb.schema();
+          IndexDefinition indexDefinition = schema.indexFor(label).on(property).create();
+          tx.success();
+          tx.close();
+
+          Transaction tx2 = graphDb.beginTx();
+          schema.awaitIndexOnline(indexDefinition, 2, TimeUnit.MINUTES);
+          tx2.success();
+          tx2.close();
+        }
+      }
     }
   }
 
@@ -114,20 +143,24 @@ public class Neo4jModule extends AbstractModule {
         .make();
   }
 
-  @SuppressWarnings("deprecation")
   @Provides
   @Singleton
   GraphDatabaseService getGraphDatabaseService() throws IOException {
     try {
-      GraphDatabaseBuilder graphDatabaseBuilder =
-          new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(configuration.getLocation())
-              .setConfig(configuration.getNeo4jConfig());
+      GraphDatabaseBuilder graphDatabaseBuilder = new GraphDatabaseFactory()
+          .newEmbeddedDatabaseBuilder(new File(configuration.getLocation()))
+          .setConfig(configuration.getNeo4jConfig());
       if (readOnly) {
-        graphDatabaseBuilder.setConfig(GraphDatabaseSettings.read_only, "true");
+        graphDatabaseBuilder.setConfig(GraphDatabaseSettings.read_only, Settings.TRUE);
       }
       if (enableGuard) {
-        graphDatabaseBuilder.setConfig("execution_guard_enabled", "true");
+        graphDatabaseBuilder.setConfig(GraphDatabaseSettings.execution_guard_enabled,
+            Settings.TRUE);
       }
+
+      // #198 - do not keep transaction logs
+      graphDatabaseBuilder.setConfig(GraphDatabaseSettings.keep_logical_logs, Settings.FALSE);
+
       final GraphDatabaseService graphDb = graphDatabaseBuilder.newGraphDatabase();
       Runtime.getRuntime().addShutdownHook(new Thread() {
         @Override
@@ -138,8 +171,10 @@ public class Neo4jModule extends AbstractModule {
 
       if (!readOnly) { // No need of auto-indexing in read-only mode
         setupAutoIndexing(graphDb, configuration);
-
       }
+
+      setupSchemaIndexes(graphDb, configuration);
+
       return graphDb;
     } catch (Exception e) {
       if (Throwables.getRootCause(e).getMessage().contains("lock file")) {

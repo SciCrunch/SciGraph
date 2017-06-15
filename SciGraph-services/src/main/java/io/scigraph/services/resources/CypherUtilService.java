@@ -39,6 +39,11 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.MediaType;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.SwaggerDefinition;
+import io.swagger.annotations.Tag;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -46,19 +51,17 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.guard.GuardException;
 
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.wordnik.swagger.annotations.Api;
-import com.wordnik.swagger.annotations.ApiOperation;
-import com.wordnik.swagger.annotations.ApiParam;
 
 @Path("/cypher")
 @Api(value = "/cypher", description = "Cypher utility services")
+@SwaggerDefinition(tags = {@Tag(name="cypher", description="Cypher utility services")})
 @Produces({MediaType.TEXT_PLAIN})
 public class CypherUtilService extends BaseResource {
 
@@ -113,10 +116,11 @@ public class CypherUtilService extends BaseResource {
 
     String sanitizedCypherQuery = cypherQuery.replaceAll(";", "") + " LIMIT " + limit;
     String replacedStartCurie = cypherUtil.resolveStartQuery(sanitizedCypherQuery);
-    Guard guard =
-        ((GraphDatabaseAPI) graphDb).getDependencyResolver().resolveDependency(Guard.class);
 
-    guard.startTimeout(timeoutMinutes * 60 * 1000);
+    // TODO I didn't find a way to time out a single query in 3.0. However it becomes easier in 3.1
+//    Guard guard =
+//        ((GraphDatabaseAPI) graphDb).getDependencyResolver().resolveDependency(Guard.class);
+    //guard.startTimeout(timeoutMinutes * 60 * 1000);
 
     try {
       if (JaxRsUtil.getVariant(request.get()) != null
@@ -150,7 +154,7 @@ public class CypherUtilService extends BaseResource {
       return "The query execution exceeds " + timeoutMinutes
           + " minutes. Consider using the neo4j shell instead of this service.";
     } finally {
-      guard.stop();
+      //guard.stop();
     }
   }
 

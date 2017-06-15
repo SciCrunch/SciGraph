@@ -15,25 +15,24 @@
  */
 package io.scigraph.vocabulary;
 
-import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
+import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.mock;
 import io.scigraph.frames.Concept;
 import io.scigraph.frames.NodeProperties;
 import io.scigraph.lucene.LuceneUtils;
 import io.scigraph.neo4j.GraphUtil;
 import io.scigraph.neo4j.NodeTransformer;
-import io.scigraph.owlapi.curies.CurieUtil;
 import io.scigraph.util.GraphTestBase;
-import io.scigraph.vocabulary.Vocabulary;
-import io.scigraph.vocabulary.VocabularyNeo4jImpl;
 import io.scigraph.vocabulary.Vocabulary.Query;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.Node;
+import org.prefixcommons.CurieUtil;
 
 /***
  * TODO: Some of these tests should be moved directly to the analyzer
@@ -61,13 +60,15 @@ public class VocabularyNeo4jScoringTest extends GraphTestBase {
   public void setupGraph() throws IOException {
     cell = buildConcept("http://x.org/#birnlex5", "Cell cell", "BL:5");
     onCell = buildConcept("http://x.org/#birnlex6", "Something on cell", "HP:0008");
-    vocabulary = new VocabularyNeo4jImpl(graphDb, null, mock(CurieUtil.class), new NodeTransformer());
+    vocabulary =
+        new VocabularyNeo4jImpl(graphDb, null, mock(CurieUtil.class), new NodeTransformer());
   }
 
   @Test
   public void testGetConceptsFromTerm() {
     Query query = new Vocabulary.Query.Builder("cell").build();
-    assertThat(vocabulary.searchConcepts(query), contains(cell, onCell));
+    List<Concept> results = vocabulary.searchConcepts(query);
+    assertThat(results, containsInAnyOrder(cell, onCell));
   }
 
 }

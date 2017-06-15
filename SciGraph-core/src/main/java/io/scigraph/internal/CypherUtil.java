@@ -19,7 +19,6 @@ import static com.google.common.base.Joiner.on;
 import static com.google.common.collect.Collections2.transform;
 import static com.google.common.collect.Iterables.getFirst;
 import static com.google.common.collect.Sets.newHashSet;
-import io.scigraph.owlapi.curies.CurieUtil;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -35,7 +34,6 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
@@ -45,6 +43,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import org.prefixcommons.CurieUtil;
 
 /***
  * A utility for more expressive Cypher queries.
@@ -101,7 +100,7 @@ public class CypherUtil {
       relationshipTypes = transform(relationshipNames, new Function<String, RelationshipType>() {
         @Override
         public RelationshipType apply(String name) {
-          return DynamicRelationshipType.withName(name);
+          return RelationshipType.withName(name);
         }
       });
       tx.success();
@@ -136,7 +135,7 @@ public class CypherUtil {
             new Function<String, String>() {
               @Override
               public String apply(String type) {
-                return curieUtil.getIri(type).or(type);
+                return curieUtil.getIri(type).orElse(type);
               }
             });
     if (entail) {
@@ -161,7 +160,7 @@ public class CypherUtil {
     Matcher m = p.matcher(cypher);
     while (m.find()) {
       String curie = m.group(1);
-      String iri = curieUtil.getIri(curie).or(curie);
+      String iri = curieUtil.getIri(curie).orElse(curie);
       resolvedCypher = resolvedCypher.replace(curie, iri);
     }
 
@@ -196,7 +195,7 @@ public class CypherUtil {
                   throw new IllegalArgumentException(
                       "Cypher relationship templates must not contain spaces");
                 }
-                return curieUtil.getIri(input.toString()).or(input.toString());
+                return curieUtil.getIri(input.toString()).orElse(input.toString());
               }
 
             });

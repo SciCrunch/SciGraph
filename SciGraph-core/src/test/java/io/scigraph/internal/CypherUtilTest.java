@@ -24,12 +24,9 @@ import static org.hamcrest.Matchers.isOneOf;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import io.scigraph.internal.CypherUtil;
-import io.scigraph.owlapi.OwlRelationships;
-import io.scigraph.owlapi.curies.CurieUtil;
-import io.scigraph.util.GraphTestBase;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 
 import org.hamcrest.collection.IsMapContaining;
@@ -38,14 +35,16 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
+import org.prefixcommons.CurieUtil;
 
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+
+import io.scigraph.owlapi.OwlRelationships;
+import io.scigraph.util.GraphTestBase;
 
 public class CypherUtilTest extends GraphTestBase {
 
@@ -57,7 +56,7 @@ public class CypherUtilTest extends GraphTestBase {
   @Before
   public void setup() {
     CurieUtil curieUtil = mock(CurieUtil.class);
-    when(curieUtil.getIri(anyString())).thenReturn(Optional.<String>absent());
+    when(curieUtil.getIri(anyString())).thenReturn(Optional.<String>empty());
     when(curieUtil.getIri("FOO:foo")).thenReturn(Optional.of("http://x.org/#foo"));
     when(curieUtil.getIri("FOO:fizz")).thenReturn(Optional.of("http://x.org/#fizz"));
     util = new CypherUtil(graphDb, curieUtil);
@@ -67,7 +66,7 @@ public class CypherUtilTest extends GraphTestBase {
     addRelationship("http://x.org/#fizz", "http://x.org/#fizz_equiv",
         OwlRelationships.OWL_EQUIVALENT_OBJECT_PROPERTY);
     addRelationship("http://x.org/#1", "http://x.org/#2",
-        DynamicRelationshipType.withName("http://x.org/#fizz"));
+        RelationshipType.withName("http://x.org/#fizz"));
   }
 
   @Test
@@ -202,7 +201,6 @@ public class CypherUtilTest extends GraphTestBase {
   public void resolveStartQueryWithMultipleMatches() {
     String cypher =
         "START n = node:node_auto_index(iri='FOO:foo') match (n) UNION START m = node:node_auto_index(iri='FOO:fizz') match (m) return n,m";
-    System.out.println(util.resolveStartQuery(cypher));
     assertThat(
         util.resolveStartQuery(cypher),
         IsEqual

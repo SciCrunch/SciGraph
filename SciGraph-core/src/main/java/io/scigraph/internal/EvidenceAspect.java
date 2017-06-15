@@ -27,7 +27,6 @@ import java.util.logging.Logger;
 import javax.inject.Inject;
 
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -37,30 +36,32 @@ import org.neo4j.graphdb.Transaction;
 import com.google.common.base.Function;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.Vertex;
+import org.prefixcommons.CurieUtil;
 
 /***
  * Add "evidence" to a graph
  */
 public class EvidenceAspect implements GraphAspect {
-
   private static final Logger logger = Logger.getLogger(EvidenceAspect.class.getName());
 
-  static final RelationshipType HAS_SUBJECT = DynamicRelationshipType
-      .withName("http://purl.org/oban/association_has_subject");
-  static final RelationshipType HAS_OBJECT = DynamicRelationshipType
-      .withName("http://purl.org/oban/association_has_object");
-  static final RelationshipType EVIDENCE = DynamicRelationshipType
-      .withName("http://purl.obolibrary.org/obo/RO_0002558");
-  static final RelationshipType SOURCE = DynamicRelationshipType
-      .withName("http://purl.org/dc/elements/1.1/source");
-  static final RelationshipType OBJECT_PROPERTY = DynamicRelationshipType
-      .withName("http://purl.org/oban/association_has_object_property");
+  static final RelationshipType HAS_SUBJECT =
+      RelationshipType.withName("http://purl.org/oban/association_has_subject");
+  static final RelationshipType HAS_OBJECT =
+      RelationshipType.withName("http://purl.org/oban/association_has_object");
+  static final RelationshipType EVIDENCE =
+      RelationshipType.withName("http://purl.obolibrary.org/obo/RO_0002558");
+  static final RelationshipType SOURCE =
+      RelationshipType.withName("http://purl.org/dc/elements/1.1/source");
+  static final RelationshipType HAS_PREDICATE =
+      RelationshipType.withName("http://purl.org/oban/association_has_predicate");
 
   private final GraphDatabaseService graphDb;
+  private final CurieUtil curieUtil;
 
   @Inject
-  EvidenceAspect(GraphDatabaseService graphDb) {
+  EvidenceAspect(GraphDatabaseService graphDb, CurieUtil curieUtil) {
     this.graphDb = graphDb;
+    this.curieUtil = curieUtil;
   }
 
   @Override
@@ -76,23 +77,26 @@ public class EvidenceAspect implements GraphAspect {
         Node subject = graphDb.getNodeById(Long.parseLong((String) vertex.getId()));
         for (Relationship hasSubject : subject.getRelationships(HAS_SUBJECT, Direction.INCOMING)) {
           Node association = hasSubject.getOtherNode(subject);
-          for (Relationship hasObject : association
-              .getRelationships(HAS_OBJECT, Direction.OUTGOING)) {
+          for (Relationship hasObject : association.getRelationships(HAS_OBJECT,
+              Direction.OUTGOING)) {
             Node object = hasObject.getOtherNode(association);
             if (nodeIds.contains(object.getId())) {
               // check of the relationship is in the graph
               Iterator<Relationship> objectProperty =
-                  association.getRelationships(OBJECT_PROPERTY, Direction.OUTGOING).iterator();
+                  association.getRelationships(HAS_PREDICATE, Direction.OUTGOING).iterator();
               if (objectProperty.hasNext()) {
                 // an association has to have 1 and only 1 object property
                 Node relationshipNode = objectProperty.next().getOtherNode(association);
                 String objectPropertyRelationship =
                     GraphUtil.getProperty(relationshipNode, NodeProperties.IRI, String.class).get();
 
+                String objectPropertyRelationshipCurie =
+                    curieUtil.getCurie(objectPropertyRelationship).orElse(objectPropertyRelationship);
+
                 boolean isEdgeInGraph = false;
                 Iterator<Vertex> connectedVertices =
                     vertex.getVertices(com.tinkerpop.blueprints.Direction.BOTH,
-                        objectPropertyRelationship).iterator();
+                        objectPropertyRelationshipCurie).iterator();
                 while (connectedVertices.hasNext()) {
                   if (Long.parseLong((String) connectedVertices.next().getId()) == object.getId()) {
                     isEdgeInGraph = true;
@@ -101,22 +105,22 @@ public class EvidenceAspect implements GraphAspect {
 
                 if (isEdgeInGraph) { // means that the relationship exists between the subject and
                                      // object
-                  TinkerGraphUtil.addEdge(graph, hasSubject);
-                  TinkerGraphUtil.addEdge(graph, hasObject);
+                  TinkerGraphUtil tgu = new TinkerGraphUtil(graph, curieUtil);
+                  tgu.addEdge(hasSubject);
+                  tgu.addEdge(hasObject);
                   for (Relationship evidence : association.getRelationships(EVIDENCE,
                       Direction.OUTGOING)) {
-                    TinkerGraphUtil.addEdge(graph, evidence);
+                    tgu.addEdge(evidence);
                   }
                   for (Relationship source : association.getRelationships(SOURCE,
                       Direction.OUTGOING)) {
-                    TinkerGraphUtil.addEdge(graph, source);
+                    tgu.addEdge(source);
                   }
                 }
               } else {
-                logger
-                    .severe(GraphUtil.getProperty(association, NodeProperties.IRI, String.class)
-                        .or(Long.toString(association.getId()))
-                        + " does not have the relation 'http://purl.org/oban/association_has_object_property'. Ignoring this association.");
+                logger.severe(GraphUtil.getProperty(association, NodeProperties.IRI, String.class)
+                    .orElse(Long.toString(association.getId())) + " does not have the relation '"
+                    + HAS_PREDICATE.name() + "'. Ignoring this association.");
               }
             }
           }

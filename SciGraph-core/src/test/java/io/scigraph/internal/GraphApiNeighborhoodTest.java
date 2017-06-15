@@ -17,33 +17,32 @@ package io.scigraph.internal;
 
 import static com.google.common.collect.Sets.newHashSet;
 import static org.hamcrest.MatcherAssert.assertThat;
-import io.scigraph.internal.GraphApi;
-import io.scigraph.neo4j.DirectedRelationshipType;
-import io.scigraph.owlapi.OwlRelationships;
-import io.scigraph.util.GraphTestBase;
 
 import java.util.Collections;
+import java.util.Optional;
 
 import org.hamcrest.collection.IsIterableWithSize;
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.Vertex;
 
+import io.scigraph.neo4j.DirectedRelationshipType;
+import io.scigraph.owlapi.OwlRelationships;
+import io.scigraph.util.GraphTestBase;
+
 public class GraphApiNeighborhoodTest extends GraphTestBase {
 
   GraphApi graphApi;
   Node a, b, c, d, e, f, g, h, i, j;
-  RelationshipType fizz = DynamicRelationshipType.withName("fizz");
-  Optional<Predicate<Node>> absent = Optional.absent();
+  RelationshipType fizz = RelationshipType.withName("fizz");
+  Optional<Predicate<Node>> absent = Optional.empty();
 
   @Before
   public void addNodes() throws Exception {
@@ -65,7 +64,7 @@ public class GraphApiNeighborhoodTest extends GraphTestBase {
     h.createRelationshipTo(j, OwlRelationships.RDFS_SUBCLASS_OF);
     g.createRelationshipTo(j, OwlRelationships.RDFS_SUBCLASS_OF);
     e.createRelationshipTo(b, fizz);
-    graphApi = new GraphApi(graphDb, cypherUtil);
+    graphApi = new GraphApi(graphDb, cypherUtil, curieUtil);
   }
 
   @Test

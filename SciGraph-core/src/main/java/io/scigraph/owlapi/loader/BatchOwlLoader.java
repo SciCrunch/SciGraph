@@ -17,22 +17,11 @@ package io.scigraph.owlapi.loader;
 
 import static com.google.common.collect.Iterables.size;
 import static java.lang.String.format;
-import io.scigraph.neo4j.Graph;
-import io.scigraph.neo4j.Neo4jModule;
-import io.scigraph.owlapi.OwlApiUtils;
-import io.scigraph.owlapi.OwlPostprocessor;
-import io.scigraph.owlapi.loader.OwlLoadConfiguration.MappedProperty;
-import io.scigraph.owlapi.loader.OwlLoadConfiguration.OntologySetup;
-import io.scigraph.owlapi.loader.bindings.IndicatesCliqueConfiguration;
-import io.scigraph.owlapi.loader.bindings.IndicatesMappedProperties;
-import io.scigraph.owlapi.loader.bindings.IndicatesNumberOfConsumerThreads;
-import io.scigraph.owlapi.loader.bindings.IndicatesNumberOfProducerThreads;
-import io.scigraph.owlapi.postprocessors.CliqueConfiguration;
-import io.scigraph.owlapi.postprocessors.Clique;
 
 import java.io.File;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionService;
@@ -57,12 +46,29 @@ import org.apache.commons.cli.ParseException;
 import org.mapdb.DB;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.tooling.GlobalGraphOperations;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+
+import io.scigraph.neo4j.Graph;
+import io.scigraph.neo4j.Neo4jModule;
+import io.scigraph.owlapi.OwlApiUtils;
+import io.scigraph.owlapi.OwlPostprocessor;
+import io.scigraph.owlapi.loader.OwlLoadConfiguration.MappedProperty;
+import io.scigraph.owlapi.loader.OwlLoadConfiguration.OntologySetup;
+import io.scigraph.owlapi.loader.bindings.IndicatesAddEdgeLabel;
+import io.scigraph.owlapi.loader.bindings.IndicatesAllNodesLabel;
+import io.scigraph.owlapi.loader.bindings.IndicatesAnonymousNodeProperty;
+import io.scigraph.owlapi.loader.bindings.IndicatesCliqueConfiguration;
+import io.scigraph.owlapi.loader.bindings.IndicatesMappedProperties;
+import io.scigraph.owlapi.loader.bindings.IndicatesNumberOfConsumerThreads;
+import io.scigraph.owlapi.loader.bindings.IndicatesNumberOfProducerThreads;
+import io.scigraph.owlapi.postprocessors.AllNodesLabeler;
+import io.scigraph.owlapi.postprocessors.AnonymousNodeTagger;
+import io.scigraph.owlapi.postprocessors.Clique;
+import io.scigraph.owlapi.postprocessors.CliqueConfiguration;
+import io.scigraph.owlapi.postprocessors.EdgeLabeler;
 
 public class BatchOwlLoader {
 
@@ -105,10 +111,22 @@ public class BatchOwlLoader {
 
   @Inject
   ExecutorService exec;
-  
+
   @Inject
   @IndicatesCliqueConfiguration
   Optional<CliqueConfiguration> cliqueConfiguration;
+
+  @Inject
+  @IndicatesAddEdgeLabel
+  Optional<Boolean> addEdgeLabel;
+
+  @Inject
+  @IndicatesAllNodesLabel
+  Optional<String> allNodesLabel;
+
+  @Inject
+  @IndicatesAnonymousNodeProperty
+  Optional<String> anonymousNodeProperty;
 
   static {
     System.setProperty("entityExpansionLimit", Integer.toString(1_000_000));
@@ -151,13 +169,25 @@ public class BatchOwlLoader {
     graph.shutdown();
     logger.info("Postprocessing...");
     postprocessorProvider.get().postprocess();
-    
-    if(cliqueConfiguration.isPresent()) {
-      postprocessorProvider.runCliquePostprocessor(cliqueConfiguration.get());
+
+    if (anonymousNodeProperty.isPresent()) {
+      postprocessorProvider.runAnonymousNodeTagger(anonymousNodeProperty.get());
     }
     
+    if (cliqueConfiguration.isPresent()) {
+      postprocessorProvider.runCliquePostprocessor(cliqueConfiguration.get());
+    }
+
+    if (addEdgeLabel.orElse(false)) {
+      postprocessorProvider.runEdgeLabelerPostprocessor();
+    }
+
+    if (allNodesLabel.isPresent()) {
+      postprocessorProvider.runAllNodesLabeler(allNodesLabel.get());
+    }
+
     postprocessorProvider.shutdown();
-    
+
   }
 
   static class PostpostprocessorProvider implements Provider<OwlPostprocessor> {
@@ -175,17 +205,31 @@ public class BatchOwlLoader {
       graphDb = graphDbProvider.get();
       return new OwlPostprocessor(graphDb, config.getCategories());
     }
-    
+
     public void runCliquePostprocessor(CliqueConfiguration cliqueConfiguration) {
       Clique clique = new Clique(graphDb, cliqueConfiguration);
       clique.run();
     }
-    
+
+    public void runEdgeLabelerPostprocessor() {
+      EdgeLabeler edgeLabeler = new EdgeLabeler(graphDb);
+      edgeLabeler.run();
+    }
+
+    public void runAllNodesLabeler(String label) {
+      AllNodesLabeler allNodesLabeler = new AllNodesLabeler(label, graphDb);
+      allNodesLabeler.run();
+    }
+
+    public void runAnonymousNodeTagger(String anonymousProperty) {
+      AnonymousNodeTagger anonymousNodeTagger = new AnonymousNodeTagger(anonymousProperty, graphDb);
+      anonymousNodeTagger.run();
+    }
+
     public void shutdown() {
       try (Transaction tx = graphDb.beginTx()) {
-        logger.info(size(GlobalGraphOperations.at(graphDb).getAllNodes()) + " nodes");
-        logger.info(size(GlobalGraphOperations.at(graphDb).getAllRelationships())
-            + " relationships");
+        logger.info(size(graphDb.getAllNodes()) + " nodes");
+        logger.info(size(graphDb.getAllRelationships()) + " relationships");
         tx.success();
       }
       graphDb.shutdown();
@@ -193,10 +237,10 @@ public class BatchOwlLoader {
 
   }
 
-  public static void load(OwlLoadConfiguration config) throws InterruptedException, ExecutionException {
-    Injector i =
-        Guice.createInjector(new OwlLoaderModule(config),
-            new Neo4jModule(config.getGraphConfiguration()));
+  public static void load(OwlLoadConfiguration config)
+      throws InterruptedException, ExecutionException {
+    Injector i = Guice.createInjector(new OwlLoaderModule(config),
+        new Neo4jModule(config.getGraphConfiguration()));
     BatchOwlLoader loader = i.getInstance(BatchOwlLoader.class);
     logger.info("Loading ontologies...");
     Stopwatch timer = Stopwatch.createStarted();
