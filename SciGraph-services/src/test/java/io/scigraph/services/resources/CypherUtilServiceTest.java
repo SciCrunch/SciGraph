@@ -45,7 +45,7 @@ public class CypherUtilServiceTest {
   @Before
   public void setup() {
     when(cypherUtil.resolveRelationships("foo!")).thenReturn("foo");
-    when(cypherUtil.resolveStartQuery("foo!")).thenReturn("foo!");
+    when(cypherUtil.resolveNodeIris("foo!")).thenReturn("foo!");
   }
 
   @Test
@@ -58,16 +58,6 @@ public class CypherUtilServiceTest {
     assertThat(
         resources.client().target("/cypher/resolve?cypherQuery=foo!").request().get(String.class),
         equalTo("foo"));
-  }
-
-  @Test
-  public void guardAvailibityTest() {
-    GraphDatabaseAPI db =
-        (GraphDatabaseAPI) new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder()
-            .setConfig(GraphDatabaseSettings.execution_guard_enabled, Settings.TRUE)
-            .newGraphDatabase();
-    Guard guard = db.getDependencyResolver().resolveDependency(Guard.class);
-    assertNotNull(guard);
   }
 
 }

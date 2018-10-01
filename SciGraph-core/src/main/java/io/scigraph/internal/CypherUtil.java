@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -73,6 +74,16 @@ public class CypherUtil {
   public CypherUtil(GraphDatabaseService graphDb, CurieUtil curieUtil) {
     this.graphDb = graphDb;
     this.curieUtil = curieUtil;
+  }
+
+  public Result execute(String query, Multimap<String, Object> params, long timeout, TimeUnit unit) {
+    query = substituteRelationships(query, params);
+    query = resolveRelationships(query);
+    return graphDb.execute(query, flattenMap(params), timeout, unit);
+  }
+
+  public Result execute(String query, long timeout, TimeUnit unit) {
+    return execute(query, HashMultimap.<String, Object>create(), timeout, unit);
   }
 
   public Result execute(String query, Multimap<String, Object> params) {
@@ -146,17 +157,41 @@ public class CypherUtil {
   }
 
   /**
-   * 
+   *
    * @param cypher
    * @return cypher with resolved STARTs
-   * 
+   *
    *         Resolves CURIEs to full IRIs in the section between a START and a MATCH. e.g. from
    *         START n = node:node_auto_index(iri='DOID:4') match (n) return n to START n =
    *         node:node_auto_index(iri='http://purl.obolibrary.org/obo/DOID_4') match (n) return n
    */
+  @Deprecated
   public String resolveStartQuery(String cypher) {
     String resolvedCypher = cypher;
     Pattern p = Pattern.compile("\\(\\s*iri\\s*=\\s*['|\"]([\\w:/\\?=]+)['|\"]\\s*\\)");
+    Matcher m = p.matcher(cypher);
+    while (m.find()) {
+      String curie = m.group(1);
+      String iri = curieUtil.getIri(curie).orElse(curie);
+      resolvedCypher = resolvedCypher.replace(curie, iri);
+    }
+
+    return resolvedCypher;
+  }
+
+  /**
+   * 
+   * @param cypher
+   * @return cypher with resolved Node IRIs
+   * 
+   *         Resolves CURIEs to full IRIs in MATCH clauses. e.g. from
+   *         MATCH (p:Node{iri:'pizza:FourSeasons'}) RETURN p to
+   *         MATCH (p:Node{iri:'http://www.co-ode.org/ontologies/pizza/
+   *         pizza.owl#FourSeasons'}) RETURN p
+   */
+  public String resolveNodeIris(String cypher) {
+    String resolvedCypher = cypher;
+    Pattern p = Pattern.compile("\\{\\s*iri\\s*:\\s*['|\"]([\\w:/\\?=]+)['|\"]\\s*\\}");
     Matcher m = p.matcher(cypher);
     while (m.find()) {
       String curie = m.group(1);
