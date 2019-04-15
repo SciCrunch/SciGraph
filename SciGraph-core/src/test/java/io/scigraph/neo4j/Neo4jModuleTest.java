@@ -22,10 +22,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.neo4j.graphdb.DynamicLabel;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.graphdb.security.WriteOperationsNotAllowedException;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -44,7 +44,7 @@ public class Neo4jModuleTest {
     configuration.setLocation(graphPath.getRoot().getAbsolutePath());
 
     injector = Guice.createInjector(new Neo4jModule(configuration));
-    injectorReadOnly = Guice.createInjector(new Neo4jModule(configuration, true, true));
+    injectorReadOnly = Guice.createInjector(new Neo4jModule(configuration, true));
   }
 
   @Test
@@ -53,17 +53,17 @@ public class Neo4jModuleTest {
         is(injector.getInstance(GraphDatabaseService.class)));
   }
 
-  @Test(expected = TransactionFailureException.class)
+  @Test(expected = WriteOperationsNotAllowedException.class)
   public void graphDbReadOnlyWithApi() {
     GraphDatabaseService graphDb = injectorReadOnly.getInstance(GraphDatabaseService.class);
     Transaction tx = graphDb.beginTx();
     try {
-      graphDb.createNode(DynamicLabel.label("test"));
+      graphDb.createNode(Label.label("test"));
     } finally {
       tx.close();
     }
   }
-  @Test(expected = TransactionFailureException.class)
+  @Test(expected = WriteOperationsNotAllowedException.class)
   public void graphDbReadOnlyWithCypher() {
     GraphDatabaseService graphDb = injectorReadOnly.getInstance(GraphDatabaseService.class);
     Transaction tx = graphDb.beginTx();

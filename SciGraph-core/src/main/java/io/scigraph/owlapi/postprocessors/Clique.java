@@ -15,22 +15,18 @@
  */
 package io.scigraph.owlapi.postprocessors;
 
-import io.scigraph.frames.NodeProperties;
-import io.scigraph.neo4j.GraphUtil;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
 
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicLabel;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -41,10 +37,11 @@ import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Uniqueness;
-import org.neo4j.tooling.GlobalGraphOperations;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
+
+import io.scigraph.frames.NodeProperties;
+import io.scigraph.neo4j.GraphUtil;
 
 public class Clique implements Postprocessor {
   private static final Logger logger = Logger.getLogger(Clique.class.getName());
@@ -53,13 +50,14 @@ public class Clique implements Postprocessor {
   static final String ORIGINAL_REFERENCE_KEY_SOURCE = "equivalentOriginalNodeSource";
   static final String ORIGINAL_REFERENCE_KEY_TARGET = "equivalentOriginalNodeTarget";
   static final String CLIQUE_LEADER_PROPERTY = "cliqueLeader";
-  static final Label CLIQUE_LEADER_LABEL = DynamicLabel.label(CLIQUE_LEADER_PROPERTY);
+  static final Label CLIQUE_LEADER_LABEL = Label.label(CLIQUE_LEADER_PROPERTY);
   static final String REL_TO_REMOVE = "edgeToBeRemoved";
 
   private List<String> prefixLeaderPriority;
   private String leaderAnnotationProperty;
   private Set<Label> forbiddenLabels;
   private Set<RelationshipType> relationships;
+  private int batchCommitSize;
 
   private final GraphDatabaseService graphDb;
 
@@ -71,24 +69,25 @@ public class Clique implements Postprocessor {
 
     Set<Label> tmpLabels = new HashSet<Label>();
     for (String l : cliqueConfiguration.getLeaderForbiddenLabels()) {
-      tmpLabels.add(DynamicLabel.label(l));
+      tmpLabels.add(Label.label(l));
     }
     this.forbiddenLabels = tmpLabels;
 
     Set<RelationshipType> tmpRelationships = new HashSet<RelationshipType>();
     for (String r : cliqueConfiguration.getRelationships()) {
-      tmpRelationships.add(DynamicRelationshipType.withName(r));
+      tmpRelationships.add(RelationshipType.withName(r));
     }
     this.relationships = tmpRelationships;
+
+    this.batchCommitSize = cliqueConfiguration.getBatchCommitSize();
   }
 
   @Override
   public void run() {
     logger.info("Starting clique merge");
-    GlobalGraphOperations globalGraphOperations = GlobalGraphOperations.at(graphDb);
 
     Transaction tx = graphDb.beginTx();
-    ResourceIterable<Node> allNodes = globalGraphOperations.getAllNodes();
+    ResourceIterable<Node> allNodes = graphDb.getAllNodes();
     int size = Iterators.size(allNodes.iterator());
     tx.success();
     tx.close();
@@ -96,7 +95,8 @@ public class Clique implements Postprocessor {
     logger.info(size + " nodes left to process");
 
     tx = graphDb.beginTx();
-    TraversalDescription traversalDescription = graphDb.traversalDescription().breadthFirst().uniqueness(Uniqueness.NODE_GLOBAL);
+    TraversalDescription traversalDescription =
+        graphDb.traversalDescription().breadthFirst().uniqueness(Uniqueness.NODE_GLOBAL);
     for (RelationshipType rel : relationships) {
       traversalDescription = traversalDescription.relationships(rel, Direction.BOTH);
     }
@@ -106,12 +106,12 @@ public class Clique implements Postprocessor {
     for (Node baseNode : allNodes) {
 
       size -= 1;
-      
+
       if (size % 100000 == 0) {
         logger.info(size + " nodes left to process");
       }
 
-      if (size % 10000 == 0) {
+      if (size % batchCommitSize == 0) {
         logger.fine("Node batch commit");
         tx.success();
         tx.close();
@@ -151,7 +151,7 @@ public class Clique implements Postprocessor {
 
   private void moveRelationship(Node from, Node to, Relationship rel, String property) {
     Relationship newRel = null;
-    logger.fine("create new rel between "  + rel.getOtherNode(from).getId() + " and " + to.getId());
+    logger.fine("create new rel between " + rel.getOtherNode(from).getId() + " and " + to.getId());
     if (property == ORIGINAL_REFERENCE_KEY_TARGET) {
       newRel = rel.getOtherNode(from).createRelationshipTo(to, rel.getType());
     } else {
@@ -179,54 +179,56 @@ public class Clique implements Postprocessor {
   private void moveEdgesToLeader(Node leader, List<Node> clique, Transaction tx) {
     for (Node n : clique) {
       logger.fine("Processing underNode - " + n.getProperty(NodeProperties.IRI));
-      int edgesMoved = 0;
+      // int edgesMoved = 0;
       Iterable<Relationship> rels = n.getRelationships();
       for (Relationship rel : rels) {
-        if ((isOneOfType(rel, relationships)) && (rel.getStartNode().getId() == leader.getId() || rel.getEndNode().getId() == leader.getId())) {
+        if ((isOneOfType(rel, relationships)) && (rel.getStartNode().getId() == leader.getId()
+            || rel.getEndNode().getId() == leader.getId())) {
           logger.fine("equivalence relation which is already attached to the leader, do nothing");
         } else {
           if ((rel.getEndNode().getId() == n.getId())) {
-            logger
-                .fine("MOVE TARGET " + rel.getId() + " FROM " + n.getProperty(NodeProperties.IRI) + " TO " + leader.getProperty(NodeProperties.IRI));
+            logger.fine("MOVE TARGET " + rel.getId() + " FROM " + n.getProperty(NodeProperties.IRI)
+                + " TO " + leader.getProperty(NodeProperties.IRI));
 
             moveRelationship(n, leader, rel, ORIGINAL_REFERENCE_KEY_TARGET);
           } else if ((rel.getStartNode().getId() == n.getId())) {
-            logger
-                .fine("MOVE SOURCE " + rel.getId() + " FROM " + n.getProperty(NodeProperties.IRI) + " TO " + leader.getProperty(NodeProperties.IRI));
+            logger.fine("MOVE SOURCE " + rel.getId() + " FROM " + n.getProperty(NodeProperties.IRI)
+                + " TO " + leader.getProperty(NodeProperties.IRI));
 
             moveRelationship(n, leader, rel, ORIGINAL_REFERENCE_KEY_SOURCE);
           }
         }
-//        edgesMoved += 1;
-//
-//        if (edgesMoved >= 100) { // Commit for nodes with many edges
-//          logger.fine("rel batch commit for leader " + leader.getProperty(NodeProperties.IRI) + " and peasant " + n.getProperty(NodeProperties.IRI));
-//          tx.success();
-//          tx.close();
-//          tx = graphDb.beginTx();
-//          edgesMoved = 0;
-//        }
+        // edgesMoved += 1;
+        //
+        // if (edgesMoved >= 100) { // Commit for nodes with many edges
+        // logger.fine("rel batch commit for leader " + leader.getProperty(NodeProperties.IRI) +
+        // " and peasant " + n.getProperty(NodeProperties.IRI));
+        // tx.success();
+        // tx.close();
+        // tx = graphDb.beginTx();
+        // edgesMoved = 0;
+        // }
       }
       deleteEdges(n, tx);
     }
   }
-  
+
   private void deleteEdges(Node n, Transaction tx) {
     int edgesDeleted = 0;
     Iterable<Relationship> rels = n.getRelationships();
     for (Relationship rel : rels) {
-      if(rel.hasProperty(REL_TO_REMOVE)){
+      if (rel.hasProperty(REL_TO_REMOVE)) {
         rel.delete();
         edgesDeleted += 1;
       }
-      
-      if (edgesDeleted >= 100) { // Commit for nodes with many edges
-        logger.fine("rel delete batch commit for " + n.getProperty(NodeProperties.IRI));
-        tx.success();
-        tx.close();
-        tx = graphDb.beginTx();
-        edgesDeleted = 0;
-      }
+
+      // if (edgesDeleted >= 100) { // Commit for nodes with many edges
+      // logger.fine("rel delete batch commit for " + n.getProperty(NodeProperties.IRI));
+      // tx.success();
+      // tx.close();
+      // tx = graphDb.beginTx();
+      // edgesDeleted = 0;
+      // }
     }
   }
 
@@ -235,9 +237,11 @@ public class Clique implements Postprocessor {
     // Move rdfs:label if non-existing on leader
     if (!leader.hasProperty(NodeProperties.LABEL)) {
       for (Node n : clique) {
-        if (n.hasProperty(NodeProperties.LABEL) && n.hasProperty("http://www.w3.org/2000/01/rdf-schema#label")) {
+        if (n.hasProperty(NodeProperties.LABEL)
+            && n.hasProperty("http://www.w3.org/2000/01/rdf-schema#label")) {
           leader.setProperty(NodeProperties.LABEL, n.getProperty(NodeProperties.LABEL));
-          leader.setProperty("http://www.w3.org/2000/01/rdf-schema#label", n.getProperty("http://www.w3.org/2000/01/rdf-schema#label"));
+          leader.setProperty("http://www.w3.org/2000/01/rdf-schema#label",
+              n.getProperty("http://www.w3.org/2000/01/rdf-schema#label"));
           return;
         }
       }
@@ -253,7 +257,8 @@ public class Clique implements Postprocessor {
   public Node electCliqueLeader(List<Node> clique, List<String> prefixLeaderPriority) {
     List<Node> designatedLeaders = designatedLeader(clique);
     if (designatedLeaders.size() > 1) {
-      logger.severe("More than one node in a clique designated as leader. Using failover strategy to elect a leader.");
+      logger.severe(
+          "More than one node in a clique designated as leader. Using failover strategy to elect a leader.");
       for (Node n : designatedLeaders) {
         logger.severe(n.getProperty(NodeProperties.IRI).toString());
       }
@@ -268,10 +273,8 @@ public class Clique implements Postprocessor {
   private List<Node> designatedLeader(List<Node> clique) {
     List<Node> designatedNodes = new ArrayList<Node>();
     for (Node n : clique) {
-      for (String k : n.getPropertyKeys()) {
-        if (leaderAnnotationProperty.equals(k)) {
-          designatedNodes.add(n);
-        }
+      if (n.hasProperty(leaderAnnotationProperty)) {
+        designatedNodes.add(n);
       }
     }
     return designatedNodes;
@@ -288,8 +291,10 @@ public class Clique implements Postprocessor {
         }
       }
       if (filteredByPrefix.isEmpty()) {
-        filteredByPrefix.add(filterByPrefix(clique, leaderPriorityIri.subList(1, leaderPriorityIri.size())));
-        //filterByPrefix(clique, leaderPriorityIri.subList(1, leaderPriorityIri.size())); // TODO handle this case
+        filteredByPrefix
+            .add(filterByPrefix(clique, leaderPriorityIri.subList(1, leaderPriorityIri.size())));
+        // filterByPrefix(clique, leaderPriorityIri.subList(1, leaderPriorityIri.size())); // TODO
+        // handle this case
       }
     }
 

@@ -26,19 +26,10 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import io.scigraph.frames.Concept;
-import io.scigraph.frames.NodeProperties;
-import io.scigraph.lucene.LuceneUtils;
-import io.scigraph.neo4j.GraphUtil;
-import io.scigraph.neo4j.NodeTransformer;
-import io.scigraph.owlapi.curies.CurieUtil;
-import io.scigraph.util.GraphTestBase;
-import io.scigraph.vocabulary.Vocabulary;
-import io.scigraph.vocabulary.VocabularyNeo4jImpl;
-import io.scigraph.vocabulary.Vocabulary.Query;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 
 import org.junit.Before;
@@ -46,9 +37,17 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.prefixcommons.CurieUtil;
 import org.semanticweb.owlapi.vocab.OWLRDFVocabulary;
 
-import com.google.common.base.Optional;
+import io.scigraph.frames.Concept;
+import io.scigraph.frames.NodeProperties;
+import io.scigraph.lucene.LuceneUtils;
+import io.scigraph.neo4j.GraphUtil;
+import io.scigraph.neo4j.NodeTransformer;
+import io.scigraph.util.GraphTestBase;
+import io.scigraph.vocabulary.Vocabulary.Query;
+
 
 /***
  * TODO: Some of these tests should be moved directly to the analyzer
@@ -84,34 +83,40 @@ public class VocabularyNeo4jImplTest extends GraphTestBase {
     try (Transaction tx = graphDb.beginTx()) {
       hippocampalFormation = buildConcept("http://example.org/#birnlex5", "Hippocampal formation");
       hippocampus = buildConcept("http://example.org/#hippocampus", "Hippocampus", "foo", "fizz");
-      GraphUtil.addProperty(graphDb.getNodeById(hippocampus.getId()), Concept.SYNONYM, "cornu ammonis");
-      GraphUtil.addProperty(graphDb.getNodeById(hippocampus.getId()), Concept.SYNONYM + LuceneUtils.EXACT_SUFFIX,
+      GraphUtil.addProperty(graphDb.getNodeById(hippocampus.getId()), Concept.SYNONYM,
           "cornu ammonis");
+      GraphUtil.addProperty(graphDb.getNodeById(hippocampus.getId()), Concept.SYNONYM
+          + LuceneUtils.EXACT_SUFFIX, "cornu ammonis");
       GraphUtil.addProperty(graphDb.getNodeById(hippocampus.getId()), Concept.ABREVIATION, "hpcs");
-      GraphUtil.addProperty(graphDb.getNodeById(hippocampus.getId()), Concept.ABREVIATION + LuceneUtils.EXACT_SUFFIX,
-          "hpcs");
-      hippocampusStructure = buildConcept("http://example.org/#hippocampusStructure",
-          "Hippocampus structure", "baz");
-      structureOfHippocampus = buildConcept("http://example.org/#structureOfHippocampus",
-          "Structure of hippocampus", "baz");
+      GraphUtil.addProperty(graphDb.getNodeById(hippocampus.getId()), Concept.ABREVIATION
+          + LuceneUtils.EXACT_SUFFIX, "hpcs");
+      hippocampusStructure =
+          buildConcept("http://example.org/#hippocampusStructure", "Hippocampus structure", "baz");
+      structureOfHippocampus =
+          buildConcept("http://example.org/#structureOfHippocampus", "Structure of hippocampus",
+              "baz");
       cerebellum = buildConcept("http://example.org/#cerebellum", "Cerebellum", "baz", "foo");
-      specialChars = buildConcept("http://example.org/#specialChars", "(-)-protein alpha", "baz",
-          "foo bar");
+      specialChars =
+          buildConcept("http://example.org/#specialChars", "(-)-protein alpha", "baz", "foo bar");
       parkinsons = buildConcept("http://example.org/#parkinsons", "Parkinson's Disease", "baz");
       GraphUtil.addProperty(graphDb.getNodeById(parkinsons.getId()), Concept.SYNONYM, "the");
       GraphUtil.addProperty(graphDb.getNodeById(parkinsons.getId()), Concept.ACRONYM, "PD");
-      GraphUtil.addProperty(graphDb.getNodeById(parkinsons.getId()), Concept.ACRONYM + LuceneUtils.EXACT_SUFFIX, "PD");
+      GraphUtil.addProperty(graphDb.getNodeById(parkinsons.getId()), Concept.ACRONYM
+          + LuceneUtils.EXACT_SUFFIX, "PD");
       als = buildConcept("http://example.org/#als", "amyotrophic lateral sclerosis");
       GraphUtil.addProperty(graphDb.getNodeById(als.getId()), Concept.SYNONYM, "Lou Gehrig's");
-      GraphUtil.addProperty(graphDb.getNodeById(als.getId()), Concept.SYNONYM + LuceneUtils.EXACT_SUFFIX,
-          "Lou Gehrig's");
-      GraphUtil.addProperty(graphDb.getNodeById(als.getId()), Concept.SYNONYM, "motor neuron disease, bulbar");
-      GraphUtil.addProperty(graphDb.getNodeById(als.getId()), Concept.SYNONYM + LuceneUtils.EXACT_SUFFIX,
+      GraphUtil.addProperty(graphDb.getNodeById(als.getId()), Concept.SYNONYM
+          + LuceneUtils.EXACT_SUFFIX, "Lou Gehrig's");
+      GraphUtil.addProperty(graphDb.getNodeById(als.getId()), Concept.SYNONYM,
           "motor neuron disease, bulbar");
+      GraphUtil.addProperty(graphDb.getNodeById(als.getId()), Concept.SYNONYM
+          + LuceneUtils.EXACT_SUFFIX, "motor neuron disease, bulbar");
       GraphUtil.addProperty(graphDb.getNodeById(als.getId()), Concept.ACRONYM, "ALS");
-      GraphUtil.addProperty(graphDb.getNodeById(als.getId()), Concept.ACRONYM + LuceneUtils.EXACT_SUFFIX, "ALS");
+      GraphUtil.addProperty(graphDb.getNodeById(als.getId()), Concept.ACRONYM
+          + LuceneUtils.EXACT_SUFFIX, "ALS");
       deprecated = buildConcept("http://example.org/#cerebellum2", "Cerebellum", "baz", "foo");
-      GraphUtil.addProperty(graphDb.getNodeById(deprecated.getId()), OWLRDFVocabulary.OWL_DEPRECATED.toString(), "true");
+      GraphUtil.addProperty(graphDb.getNodeById(deprecated.getId()),
+          OWLRDFVocabulary.OWL_DEPRECATED.toString(), "true");
       tx.success();
     }
 
@@ -119,7 +124,7 @@ public class VocabularyNeo4jImplTest extends GraphTestBase {
     when(curieUtil.getPrefixes()).thenReturn(newHashSet("H", "S"));
     when(curieUtil.getExpansion("H")).thenReturn("http://example.org/#h");
     when(curieUtil.getExpansion("S")).thenReturn("http://example.org/#s");
-    when(curieUtil.getIri(anyString())).thenReturn(Optional.<String>absent());
+    when(curieUtil.getIri(anyString())).thenReturn(Optional.<String>empty());
     when(curieUtil.getIri("HP:0008")).thenReturn(Optional.of("http://example.org/#hippocampus"));
     vocabulary = new VocabularyNeo4jImpl(graphDb, null, curieUtil, new NodeTransformer());
   }
@@ -151,8 +156,10 @@ public class VocabularyNeo4jImplTest extends GraphTestBase {
   @Test
   public void testSearchConcepts() {
     Query query = new Vocabulary.Query.Builder("hippocampus").build();
-    assertThat(vocabulary.searchConcepts(query),
-        containsInAnyOrder(hippocampus, structureOfHippocampus, hippocampusStructure, hippocampalFormation));
+    assertThat(
+        vocabulary.searchConcepts(query),
+        containsInAnyOrder(hippocampus, structureOfHippocampus, hippocampusStructure,
+            hippocampalFormation));
   }
 
   @Test
@@ -163,8 +170,8 @@ public class VocabularyNeo4jImplTest extends GraphTestBase {
 
   @Test
   public void testSearchConceptsWithCategory() {
-    Query query = new Vocabulary.Query.Builder("hippocampus").categories(newArrayList("foo"))
-        .build();
+    Query query =
+        new Vocabulary.Query.Builder("hippocampus").categories(newArrayList("foo")).build();
     assertThat(vocabulary.searchConcepts(query), contains(hippocampus));
   }
 
@@ -194,8 +201,8 @@ public class VocabularyNeo4jImplTest extends GraphTestBase {
 
   @Test
   public void testSearchconceptsWithNonexistantCategory() {
-    Query query = new Vocabulary.Query.Builder("hippocampus").categories(
-        newArrayList("doesntExist")).build();
+    Query query =
+        new Vocabulary.Query.Builder("hippocampus").categories(newArrayList("doesntExist")).build();
     assertThat(vocabulary.searchConcepts(query), is(empty()));
   }
 
@@ -223,7 +230,8 @@ public class VocabularyNeo4jImplTest extends GraphTestBase {
   @Test
   public void testGetConceptFromCuriePrefix() {
     Query query = new Vocabulary.Query.Builder("HP:0008").build();
-    assertThat(vocabulary.getConceptsFromPrefix(query), containsInAnyOrder(hippocampus, hippocampusStructure));
+    assertThat(vocabulary.getConceptsFromPrefix(query),
+        containsInAnyOrder(hippocampus, hippocampusStructure));
   }
 
   @Test
@@ -240,21 +248,23 @@ public class VocabularyNeo4jImplTest extends GraphTestBase {
 
   @Test
   public void testGetConceptsFromPrefixWithMultipleCategories() {
-    Query query = new Vocabulary.Query.Builder("hip").categories(newArrayList("baz", "foo"))
-        .build();
-    assertThat(vocabulary.getConceptsFromPrefix(query), contains(hippocampus, hippocampusStructure));
+    Query query =
+        new Vocabulary.Query.Builder("hip").categories(newArrayList("baz", "foo")).build();
+    assertThat(vocabulary.getConceptsFromPrefix(query), containsInAnyOrder(hippocampus, hippocampusStructure));
   }
 
   @Test
   public void testGetConceptsFromPrefixWithCuriePrefix() {
     Query query = new Vocabulary.Query.Builder("hip").prefixes(newHashSet("H")).build();
-    assertThat(vocabulary.getConceptsFromPrefix(query), containsInAnyOrder(hippocampus, hippocampusStructure));
+    assertThat(vocabulary.getConceptsFromPrefix(query),
+        containsInAnyOrder(hippocampus, hippocampusStructure));
   }
 
   @Test
   public void testGetConceptsFromPrefixWithMultipleCuriePrefixes() {
     Query query = new Vocabulary.Query.Builder("hip").prefixes(newHashSet("H", "S")).build();
-    assertThat(vocabulary.getConceptsFromPrefix(query), containsInAnyOrder(hippocampus, hippocampusStructure));
+    assertThat(vocabulary.getConceptsFromPrefix(query),
+        containsInAnyOrder(hippocampus, hippocampusStructure));
   }
 
   @Test
@@ -308,6 +318,7 @@ public class VocabularyNeo4jImplTest extends GraphTestBase {
   @Test
   public void testLeadingAndTrailingPunctuation() {
     Query query = new Vocabulary.Query.Builder("hippocampus,").build();
+    System.out.println(vocabulary.getConceptsFromTerm(query));
     assertThat(vocabulary.getConceptsFromTerm(query), contains(hippocampus));
     query = new Vocabulary.Query.Builder(",hippocampal formations,").build();
     assertThat(vocabulary.getConceptsFromTerm(query), contains(hippocampalFormation));
@@ -383,9 +394,13 @@ public class VocabularyNeo4jImplTest extends GraphTestBase {
 
   @Test
   public void specialCharactersAreEscaped() {
-    Query query = new Vocabulary.Query.Builder("HP:0008").includeSynonyms(true).categories(newHashSet("foo")).build();
+    Query query =
+        new Vocabulary.Query.Builder("HP:0008").includeSynonyms(true).categories(newHashSet("foo"))
+            .build();
     assertThat(vocabulary.getConceptsFromTerm(query), is(empty()));
-    query = new Vocabulary.Query.Builder("HP:0008").includeSynonyms(true).categories(newHashSet("foo")).build();
+    query =
+        new Vocabulary.Query.Builder("HP:0008").includeSynonyms(true).categories(newHashSet("foo"))
+            .build();
     assertThat(vocabulary.searchConcepts(query), is(empty()));
   }
 

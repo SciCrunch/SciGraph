@@ -21,16 +21,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
-import io.scigraph.neo4j.Graph;
+
+import java.util.Optional;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.neo4j.graphdb.DynamicLabel;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.RelationshipType;
-
-import com.google.common.base.Optional;
 
 public abstract class GraphTestBase<T extends Graph> {
 
@@ -38,9 +35,9 @@ public abstract class GraphTestBase<T extends Graph> {
 
   protected abstract T createInstance() throws Exception;
 
-  static RelationshipType TYPE = DynamicRelationshipType.withName("type");
-  static Label LABEL1 = DynamicLabel.label("label1");
-  static Label LABEL2 = DynamicLabel.label("label2");
+  static RelationshipType TYPE = RelationshipType.withName("type");
+  static Label LABEL1 = Label.label("label1");
+  static Label LABEL2 = Label.label("label2");
 
   @Before
   public void setup() throws Exception {
@@ -49,7 +46,7 @@ public abstract class GraphTestBase<T extends Graph> {
 
   @Test
   public void nonExistantNodesAreAbsent() {
-    assertThat(graph.getNode("foo"), is(Optional.<Long>absent()));
+    assertThat(graph.getNode("foo"), is(Optional.<Long>empty()));
   }
 
   @Test
@@ -68,7 +65,7 @@ public abstract class GraphTestBase<T extends Graph> {
   @Test
   public void absentNodesProperties_areAbsent() {
     long node = graph.createNode("foo");
-    assertThat(graph.getNodeProperty(node, "bar", String.class), is(Optional.<String>absent()));
+    assertThat(graph.getNodeProperty(node, "bar", String.class), is(Optional.<String>empty()));
   }
 
   @Test
@@ -111,7 +108,8 @@ public abstract class GraphTestBase<T extends Graph> {
   public void nodeProperty_castException() {
     long node = graph.createNode("foo");
     graph.setNodeProperty(node, "bar", "baz");
-    graph.getNodeProperty(node, "bar", Integer.class).get();
+    @SuppressWarnings("unused")
+    Integer unused = graph.getNodeProperty(node, "bar", Integer.class).get();
   }
 
   @Test
@@ -126,7 +124,7 @@ public abstract class GraphTestBase<T extends Graph> {
   public void absentRelationships_areAbsent() {
     long start = graph.createNode("foo");
     long end = graph.createNode("bar");
-    assertThat(graph.getRelationship(start, end, TYPE), is(Optional.<Long>absent()));
+    assertThat(graph.getRelationship(start, end, TYPE), is(Optional.<Long>empty()));
   }
 
   @Test
@@ -150,7 +148,7 @@ public abstract class GraphTestBase<T extends Graph> {
   @Test
   public void absentRelationshipProperties_areAbsent() {
     long node = graph.createNode("foo");
-    assertThat(graph.getNodeProperty(node, "bar", String.class), is(Optional.<String>absent()));
+    assertThat(graph.getNodeProperty(node, "bar", String.class), is(Optional.<String>empty()));
   }
 
   @Test

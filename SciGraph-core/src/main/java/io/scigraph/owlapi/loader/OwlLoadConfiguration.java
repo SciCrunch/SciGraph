@@ -15,16 +15,16 @@
  */
 package io.scigraph.owlapi.loader;
 
-import io.scigraph.neo4j.Neo4jConfiguration;
-import io.scigraph.owlapi.postprocessors.CliqueConfiguration;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Optional;
+
+import io.scigraph.neo4j.Neo4jConfiguration;
+import io.scigraph.owlapi.postprocessors.CliqueConfiguration;
 
 public class OwlLoadConfiguration {
 
@@ -32,8 +32,35 @@ public class OwlLoadConfiguration {
   private List<OntologySetup> ontologies = new ArrayList<>();
   private Map<String, String> categories = new HashMap<>();
   private List<MappedProperty> mappedProperties = new ArrayList<>();
-  private Optional<CliqueConfiguration> cliqueConfiguration = Optional.absent();
-  
+  private Optional<CliqueConfiguration> cliqueConfiguration = Optional.empty();
+  private Optional<Boolean> addEdgeLabel = Optional.empty();
+  private Optional<String> allNodesLabel = Optional.empty();
+  private Optional<String> anonymousNodeProperty = Optional.empty();
+
+  public Optional<String> getAnonymousNodeProperty() {
+    return anonymousNodeProperty;
+  }
+
+  public void setAnonymousNodeProperty(String anonymousNodeProperty) {
+    this.anonymousNodeProperty = Optional.of(anonymousNodeProperty);
+  }
+
+  public Optional<String> getAllNodesLabel() {
+    return allNodesLabel;
+  }
+
+  public void setAllNodesLabel(String allNodesLabel) {
+    this.allNodesLabel = Optional.of(allNodesLabel);
+  }
+
+  public Optional<Boolean> getAddEdgeLabel() {
+    return addEdgeLabel;
+  }
+
+  public void setAddEdgeLabel(Boolean addEdgeLabel) {
+    this.addEdgeLabel = Optional.of(addEdgeLabel);
+  }
+
   public Optional<CliqueConfiguration> getCliqueConfiguration() {
     return cliqueConfiguration;
   }
@@ -42,10 +69,10 @@ public class OwlLoadConfiguration {
     this.cliqueConfiguration = Optional.of(cliqueConfiguration);
   }
 
-  private int producerThreadCount = (int) Math.ceil(Runtime.getRuntime()
-      .availableProcessors() * 0.25);
-  private int consumerThreadCount = (int) Math.ceil(Runtime.getRuntime()
-      .availableProcessors() * 0.75);
+  private int producerThreadCount = (int) Math
+      .ceil(Runtime.getRuntime().availableProcessors() * 0.25);
+  private int consumerThreadCount = (int) Math
+      .ceil(Runtime.getRuntime().availableProcessors() * 0.75);
 
   public Neo4jConfiguration getGraphConfiguration() {
     return graphConfiguration;
@@ -95,8 +122,7 @@ public class OwlLoadConfiguration {
 
     String url;
 
-    Optional<ReasonerConfiguration> reasonerConfiguration = Optional
-        .absent();
+    Optional<ReasonerConfiguration> reasonerConfiguration = Optional.empty();
 
     boolean skipImports = false;
 
@@ -112,8 +138,7 @@ public class OwlLoadConfiguration {
       return reasonerConfiguration;
     }
 
-    public void setReasonerConfiguration(
-        ReasonerConfiguration reasonerConfiguration) {
+    public void setReasonerConfiguration(ReasonerConfiguration reasonerConfiguration) {
       this.reasonerConfiguration = Optional.of(reasonerConfiguration);
     }
 
@@ -162,8 +187,7 @@ public class OwlLoadConfiguration {
       return removeUnsatisfiableClasses;
     }
 
-    public void setRemoveUnsatisfiableClasses(
-        boolean removeUnsatisfiableClasses) {
+    public void setRemoveUnsatisfiableClasses(boolean removeUnsatisfiableClasses) {
       this.removeUnsatisfiableClasses = removeUnsatisfiableClasses;
     }
 
@@ -181,8 +205,7 @@ public class OwlLoadConfiguration {
     String name;
     List<String> properties = new ArrayList<>();
 
-    public MappedProperty() {
-    }
+    public MappedProperty() {}
 
     public MappedProperty(String name) {
       this.name = name;
@@ -202,8 +225,8 @@ public class OwlLoadConfiguration {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this.getClass())
-          .add("name", name).add("properties", properties).toString();
+      return MoreObjects.toStringHelper(this.getClass()).add("name", name)
+          .add("properties", properties).toString();
     }
 
   }

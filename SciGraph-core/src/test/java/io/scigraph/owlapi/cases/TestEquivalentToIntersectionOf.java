@@ -18,18 +18,18 @@ package io.scigraph.owlapi.cases;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import io.scigraph.frames.CommonProperties;
-import io.scigraph.neo4j.GraphUtil;
-import io.scigraph.owlapi.OwlLabels;
-import io.scigraph.owlapi.OwlRelationships;
+
+import java.util.Optional;
 
 import org.junit.Test;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 
-import com.google.common.base.Optional;
+import io.scigraph.frames.CommonProperties;
+import io.scigraph.neo4j.GraphUtil;
+import io.scigraph.owlapi.OwlLabels;
+import io.scigraph.owlapi.OwlRelationships;
 
 public class TestEquivalentToIntersectionOf extends OwlTestCase {
 
@@ -38,7 +38,7 @@ public class TestEquivalentToIntersectionOf extends OwlTestCase {
     Node anonymousClass = graphDb.findNodes(OwlLabels.OWL_INTERSECTION_OF).next();
     Node fillerClass = getNode("http://example.org/fillerClass");
 
-    RelationshipType p = DynamicRelationshipType.withName("http://example.org/p");
+    RelationshipType p = RelationshipType.withName("http://example.org/p");
     Relationship r = getOnlyElement(GraphUtil.getRelationships(anonymousClass, fillerClass, p));
 
     assertThat(GraphUtil.getProperty(r, CommonProperties.CONVENIENCE, Boolean.class),

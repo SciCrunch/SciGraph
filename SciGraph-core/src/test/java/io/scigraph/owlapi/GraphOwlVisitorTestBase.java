@@ -33,6 +33,7 @@ import io.scigraph.owlapi.GraphOwlVisitor;
 import io.scigraph.owlapi.OwlLabels;
 import io.scigraph.owlapi.OwlRelationships;
 import io.scigraph.owlapi.loader.OwlLoadConfiguration.MappedProperty;
+import uk.ac.manchester.cs.owl.owlapi.OWLAnnotationAssertionAxiomImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,7 +46,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -56,6 +56,10 @@ import org.neo4j.graphdb.index.ReadableIndex;
 import org.neo4j.test.TestGraphDatabaseFactory;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
+import org.semanticweb.owlapi.model.OWLAnnotation;
+import org.semanticweb.owlapi.model.OWLAnnotationAssertionAxiom;
+import org.semanticweb.owlapi.model.OWLAnnotationSubject;
+import org.semanticweb.owlapi.model.OWLOntology;
 import org.semanticweb.owlapi.model.OWLOntologyManager;
 import org.semanticweb.owlapi.util.OWLOntologyWalker;
 
@@ -64,6 +68,8 @@ import com.google.common.io.Resources;
 public abstract class GraphOwlVisitorTestBase<T extends Graph> {
 
   static final String ROOT = "http://example.com/owl/families";
+  static final String OWL = "http://www.w3.org/2002/07/owl#";
+  static final String VERSION_IRI = "http://example.com/owl/families/2017-10-05/family.owl";
   static final String OTHER_ROOT = "http://example.org/otherOntologies/families";
 
   @ClassRule
@@ -109,11 +115,27 @@ public abstract class GraphOwlVisitorTestBase<T extends Graph> {
     when(age.getName()).thenReturn("isAged");
     when(age.getProperties()).thenReturn(newArrayList(ROOT + "/hasAge"));
     propertyMap.add(age);
+    MappedProperty versionInfo = mock(MappedProperty.class);
+    when(versionInfo.getName()).thenReturn("versionInfo");
+    when(versionInfo.getProperties()).thenReturn(newArrayList(OWL + "versionInfo"));
+    propertyMap.add(versionInfo);
     OWLOntologyWalker walker = new OWLOntologyWalker(manager.getOntologies());
     GraphOwlVisitor visitor = new GraphOwlVisitor(walker, graph, propertyMap);
     walker.walkStructure(visitor);
+    
+    for (OWLOntology ontology : manager.getOntologies()){
+      String ontologyIri = OwlApiUtils.getIri(ontology);
+      for (OWLAnnotation annotation : ontology.getAnnotations()) { // Get annotations on ontology iri
+        OWLAnnotationSubject ontologySubject = IRI.create(ontologyIri);
+        OWLAnnotationAssertionAxiom object = 
+            new OWLAnnotationAssertionAxiomImpl(ontologySubject,
+                annotation.getProperty(), annotation.getValue(),
+                new ArrayList<OWLAnnotation>());
+        visitor.visit(object);
+      }
+    }
     graph.shutdown();
-    graphDb = new TestGraphDatabaseFactory().newEmbeddedDatabase(new File(path).toString());
+    graphDb = new TestGraphDatabaseFactory().newEmbeddedDatabase(new File(path));
     tx = graphDb.beginTx();
     nodeIndex = graphDb.index().getNodeAutoIndexer().getAutoIndex();
     builtGraph = true;
@@ -218,7 +240,7 @@ public abstract class GraphOwlVisitorTestBase<T extends Graph> {
   public void nonLiteralAnnotationAssertionAxiom() {
     Node person = getNode(ROOT + "/Person");
     Node fazz = getNode(ROOT + "/Fazz");
-    Relationship relationship = getOnlyElement(GraphUtil.getRelationships(person, fazz, DynamicRelationshipType.withName(ROOT + "/fizz"), true));
+    Relationship relationship = getOnlyElement(GraphUtil.getRelationships(person, fazz, RelationshipType.withName(ROOT + "/fizz"), true));
     assertThat(GraphUtil.getProperty(relationship, CommonProperties.IRI, String.class).get(),
         is(ROOT + "/fizz"));
   }
@@ -256,12 +278,18 @@ public abstract class GraphOwlVisitorTestBase<T extends Graph> {
     Node john = getNode(ROOT + "/John");
     assertThat(GraphUtil.getProperty(john, "isAged", Integer.class).get(), is(51));
   }
+  
+  @Test
+  public void mappedAnnotationPropertyOnOntologyAssertion() {
+    Node ontology = getNode(ROOT);
+    assertThat(GraphUtil.getProperty(ontology, "versionInfo", String.class).get(), is("version 4.0"));
+  }
 
   @Test
   public void objectPropertyAssertions() {
     Node susan = getNode(ROOT + "/Susan");
     Node meg = getNode(ROOT + "/Meg");
-    assertThat(hasDirectedRelationship(susan, meg, DynamicRelationshipType.withName(ROOT + "/#hasAncestor")), is(true));
+    assertThat(hasDirectedRelationship(susan, meg, RelationshipType.withName(ROOT + "/#hasAncestor")), is(true));
   }
 
   @Test
@@ -369,6 +397,14 @@ public abstract class GraphOwlVisitorTestBase<T extends Graph> {
   public void objectProperties() {
     Node hasParent = getNode(ROOT + "/hasParent");
     assertThat(hasParent.hasLabel(OwlLabels.OWL_OBJECT_PROPERTY), is(true));
+  }
+  
+  @Test
+  public void versionIRI() {
+    Node ontology = getNode(ROOT);
+    Node version = getNode(VERSION_IRI);
+    assertThat(hasRelationship(ontology, version, OwlRelationships.OWL_VERSION_IRI), is(true));
+    
   }
 
 

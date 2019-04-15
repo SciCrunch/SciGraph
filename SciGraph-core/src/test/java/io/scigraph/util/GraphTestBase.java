@@ -26,28 +26,29 @@ import io.scigraph.neo4j.Neo4jConfiguration;
 import io.scigraph.neo4j.Neo4jModule;
 import io.scigraph.neo4j.RelationshipMap;
 import io.scigraph.owlapi.OwlLabels;
-import io.scigraph.owlapi.curies.CurieUtil;
 
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.junit.*;
+
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.test.rule.ImpermanentDatabaseRule;
+import org.prefixcommons.CurieUtil;
 
 public class GraphTestBase {
 
-  protected static GraphDatabaseService graphDb;
+  @ClassRule
+  public static ImpermanentDatabaseRule graphDb = new ImpermanentDatabaseRule();
+
   protected static CypherUtil cypherUtil;
   protected static Graph graph;
+  protected static CurieUtil curieUtil;
   static ConcurrentHashMap<String, Long> idMap = new ConcurrentHashMap<>();
+  static RelationshipMap relMap = new RelationshipMap();
 
   Transaction tx;
 
@@ -60,7 +61,8 @@ public class GraphTestBase {
     return graphDb.getNodeById(node);
   }
 
-  static protected Relationship addRelationship(String parentIri, String childIri, RelationshipType type) {
+  static protected Relationship addRelationship(String parentIri, String childIri,
+      RelationshipType type) {
     Node parent = createNode(parentIri);
     Node child = createNode(childIri);
     return child.createRelationshipTo(parent, type);
@@ -68,21 +70,18 @@ public class GraphTestBase {
 
   @BeforeClass
   public static void setupDb() {
-    graphDb = new TestGraphDatabaseFactory().newImpermanentDatabaseBuilder().newGraphDatabase();
+    // graphDb = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(new
+    // File("/tmp/lucene")).newGraphDatabase(); // convenient for debugging
     Neo4jConfiguration config = new Neo4jConfiguration();
-    config.getExactNodeProperties().addAll(newHashSet(
-        NodeProperties.LABEL,
-        Concept.SYNONYM,
-        Concept.ABREVIATION,
-        Concept.ACRONYM));
-    config.getIndexedNodeProperties().addAll(newHashSet(
-        NodeProperties.LABEL,
-        Concept.CATEGORY, Concept.SYNONYM,
-        Concept.ABREVIATION,
-        Concept.ACRONYM));
+    config.getExactNodeProperties().addAll(
+        newHashSet(NodeProperties.LABEL, Concept.SYNONYM, Concept.ABREVIATION, Concept.ACRONYM));
+    config.getIndexedNodeProperties().addAll(
+        newHashSet(NodeProperties.LABEL, Concept.CATEGORY, Concept.SYNONYM, Concept.ABREVIATION,
+            Concept.ACRONYM));
     Neo4jModule.setupAutoIndexing(graphDb, config);
-    graph = new GraphTransactionalImpl(graphDb, idMap, new RelationshipMap());
-    cypherUtil = new CypherUtil(graphDb, new CurieUtil(Collections.<String, String>emptyMap()));
+    graph = new GraphTransactionalImpl(graphDb, idMap, relMap);
+    curieUtil = new CurieUtil(Collections.<String, String>emptyMap());
+    cypherUtil = new CypherUtil(graphDb, curieUtil);
   }
 
   @AfterClass
@@ -98,7 +97,9 @@ public class GraphTestBase {
   @After
   public void failTransaction() {
     idMap.clear();
+    relMap.clear();
     tx.failure();
+    // tx.success(); // convenient for debugging
     tx.close();
   }
 

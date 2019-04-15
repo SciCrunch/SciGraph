@@ -25,10 +25,10 @@ import io.scigraph.owlapi.curies.CurieModule;
 import io.scigraph.services.configuration.ApplicationConfiguration;
 import io.scigraph.services.jersey.dynamic.DynamicResourceModule;
 import io.scigraph.services.refine.RefineModule;
-import io.scigraph.services.swagger.beans.resource.Apis;
 
-import java.util.List;
+import java.util.Map;
 
+import io.swagger.models.Path;
 import ru.vyarus.dropwizard.guice.module.support.ConfigurationAwareModule;
 
 import com.google.inject.AbstractModule;
@@ -45,7 +45,7 @@ class SciGraphApplicationModule extends AbstractModule implements ConfigurationA
 
   @Override
   protected void configure() {
-    install(new Neo4jModule(configuration.getGraphConfiguration(), true, true));
+    install(new Neo4jModule(configuration.getGraphConfiguration(), true));
     bind(Graph.class).to(GraphTransactionalImpl.class);
     install(new EntityModule());
     install(new LexicalLibModule());
@@ -56,7 +56,7 @@ class SciGraphApplicationModule extends AbstractModule implements ConfigurationA
   }
 
   @Provides
-  List<Apis> getApis() {
+  Map<String,Path> getPaths() {
     return configuration.getCypherResources();
   }
 

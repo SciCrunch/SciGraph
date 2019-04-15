@@ -19,7 +19,6 @@ import static com.google.common.base.Joiner.on;
 import static com.google.common.collect.Collections2.transform;
 import static com.google.common.collect.Iterables.getFirst;
 import static com.google.common.collect.Sets.newHashSet;
-import io.scigraph.owlapi.curies.CurieUtil;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -28,6 +27,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,7 +35,6 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
-import org.neo4j.graphdb.DynamicRelationshipType;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
@@ -45,6 +44,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import org.prefixcommons.CurieUtil;
 
 /***
  * A utility for more expressive Cypher queries.
@@ -76,6 +76,16 @@ public class CypherUtil {
     this.curieUtil = curieUtil;
   }
 
+  public Result execute(String query, Multimap<String, Object> params, long timeout, TimeUnit unit) {
+    query = substituteRelationships(query, params);
+    query = resolveRelationships(query);
+    return graphDb.execute(query, flattenMap(params), timeout, unit);
+  }
+
+  public Result execute(String query, long timeout, TimeUnit unit) {
+    return execute(query, HashMultimap.<String, Object>create(), timeout, unit);
+  }
+
   public Result execute(String query, Multimap<String, Object> params) {
     query = substituteRelationships(query, params);
     query = resolveRelationships(query);
@@ -101,7 +111,7 @@ public class CypherUtil {
       relationshipTypes = transform(relationshipNames, new Function<String, RelationshipType>() {
         @Override
         public RelationshipType apply(String name) {
-          return DynamicRelationshipType.withName(name);
+          return RelationshipType.withName(name);
         }
       });
       tx.success();
@@ -136,7 +146,7 @@ public class CypherUtil {
             new Function<String, String>() {
               @Override
               public String apply(String type) {
-                return curieUtil.getIri(type).or(type);
+                return curieUtil.getIri(type).orElse(type);
               }
             });
     if (entail) {
@@ -147,21 +157,45 @@ public class CypherUtil {
   }
 
   /**
-   * 
+   *
    * @param cypher
    * @return cypher with resolved STARTs
-   * 
+   *
    *         Resolves CURIEs to full IRIs in the section between a START and a MATCH. e.g. from
    *         START n = node:node_auto_index(iri='DOID:4') match (n) return n to START n =
    *         node:node_auto_index(iri='http://purl.obolibrary.org/obo/DOID_4') match (n) return n
    */
+  @Deprecated
   public String resolveStartQuery(String cypher) {
     String resolvedCypher = cypher;
     Pattern p = Pattern.compile("\\(\\s*iri\\s*=\\s*['|\"]([\\w:/\\?=]+)['|\"]\\s*\\)");
     Matcher m = p.matcher(cypher);
     while (m.find()) {
       String curie = m.group(1);
-      String iri = curieUtil.getIri(curie).or(curie);
+      String iri = curieUtil.getIri(curie).orElse(curie);
+      resolvedCypher = resolvedCypher.replace(curie, iri);
+    }
+
+    return resolvedCypher;
+  }
+
+  /**
+   * 
+   * @param cypher
+   * @return cypher with resolved Node IRIs
+   * 
+   *         Resolves CURIEs to full IRIs in MATCH clauses. e.g. from
+   *         MATCH (p:Node{iri:'pizza:FourSeasons'}) RETURN p to
+   *         MATCH (p:Node{iri:'http://www.co-ode.org/ontologies/pizza/
+   *         pizza.owl#FourSeasons'}) RETURN p
+   */
+  public String resolveNodeIris(String cypher) {
+    String resolvedCypher = cypher;
+    Pattern p = Pattern.compile("\\{\\s*iri\\s*:\\s*['|\"]([\\w:/\\?=]+)['|\"]\\s*\\}");
+    Matcher m = p.matcher(cypher);
+    while (m.find()) {
+      String curie = m.group(1);
+      String iri = curieUtil.getIri(curie).orElse(curie);
       resolvedCypher = resolvedCypher.replace(curie, iri);
     }
 
@@ -196,7 +230,7 @@ public class CypherUtil {
                   throw new IllegalArgumentException(
                       "Cypher relationship templates must not contain spaces");
                 }
-                return curieUtil.getIri(input.toString()).or(input.toString());
+                return curieUtil.getIri(input.toString()).orElse(input.toString());
               }
 
             });
