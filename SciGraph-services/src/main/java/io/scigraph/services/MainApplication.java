@@ -127,12 +127,6 @@ public class MainApplication extends Application<ApplicationConfiguration> {
     configureCors(environment);
 
     //TODO: This path should not be hard coded.
-    /*
-    // TODO swagger 1.5 reflection does not work on jvm 17
-    // commenting the swagger stuff out is sufficient to allow SciGraph to run
-    // if we want to be able to use swagger with jvm 17 then I think we have to
-    // switch to use swagger 2.0 and redo all the annotations and imports, not a
-    // small task ... and also seems like a good reason to never use swagger :/
     configureSwagger(environment, "scigraph");
     environment.servlets().
             addFilter("Swagger Filter", factory.getInjector().getInstance(SwaggerFilter.class))
@@ -140,7 +134,6 @@ public class MainApplication extends Application<ApplicationConfiguration> {
 
     environment.servlets().addFilter("swaggerDocResolver", new SwaggerDocUrlFilter())
     .addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class), false, "/*");
-    */
 
     DynamicCypherResourceFactory cypherFactory = factory.getInjector().getInstance(DynamicCypherResourceFactory.class);
     for (Map.Entry<String,Path> config: configuration.getCypherResources().entrySet()) {
