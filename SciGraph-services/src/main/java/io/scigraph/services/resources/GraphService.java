@@ -104,7 +104,7 @@ public class GraphService extends BaseResource {
   @Produces({MediaType.APPLICATION_JSON, CustomMediaTypes.APPLICATION_GRAPHSON,
       MediaType.APPLICATION_XML, CustomMediaTypes.APPLICATION_GRAPHML,
       CustomMediaTypes.APPLICATION_XGMML, CustomMediaTypes.TEXT_GML, CustomMediaTypes.TEXT_CSV,
-      CustomMediaTypes.TEXT_TSV, CustomMediaTypes.IMAGE_JPEG, CustomMediaTypes.IMAGE_PNG})
+      CustomMediaTypes.TEXT_TSV})
   public Object getNeighborsFromMultipleRoots(
       @ApiParam(value = DocumentationStrings.GRAPH_ID_DOC,
           required = true) @QueryParam("id") Set<String> ids,
@@ -199,7 +199,7 @@ public class GraphService extends BaseResource {
   @Produces({MediaType.APPLICATION_JSON, CustomMediaTypes.APPLICATION_GRAPHSON,
       MediaType.APPLICATION_XML, CustomMediaTypes.APPLICATION_GRAPHML,
       CustomMediaTypes.APPLICATION_XGMML, CustomMediaTypes.TEXT_GML, CustomMediaTypes.TEXT_CSV,
-      CustomMediaTypes.TEXT_TSV, CustomMediaTypes.IMAGE_JPEG, CustomMediaTypes.IMAGE_PNG})
+      CustomMediaTypes.TEXT_TSV})
   public Object getNeighbors(
       @ApiParam(value = DocumentationStrings.GRAPH_ID_DOC,
           required = true) @PathParam("id") String id,
@@ -229,7 +229,7 @@ public class GraphService extends BaseResource {
   @Produces({MediaType.APPLICATION_JSON, CustomMediaTypes.APPLICATION_GRAPHSON,
       MediaType.APPLICATION_XML, CustomMediaTypes.APPLICATION_GRAPHML,
       CustomMediaTypes.APPLICATION_XGMML, CustomMediaTypes.TEXT_GML, CustomMediaTypes.TEXT_CSV,
-      CustomMediaTypes.TEXT_TSV, CustomMediaTypes.IMAGE_JPEG, CustomMediaTypes.IMAGE_PNG})
+      CustomMediaTypes.TEXT_TSV})
   public Object getNode(
       @ApiParam(value = DocumentationStrings.GRAPH_ID_DOC,
           required = true) @PathParam("id") String id,
@@ -249,7 +249,7 @@ public class GraphService extends BaseResource {
   @Produces({MediaType.APPLICATION_JSON, CustomMediaTypes.APPLICATION_GRAPHSON,
       MediaType.APPLICATION_XML, CustomMediaTypes.APPLICATION_GRAPHML,
       CustomMediaTypes.APPLICATION_XGMML, CustomMediaTypes.TEXT_GML, CustomMediaTypes.TEXT_CSV,
-      CustomMediaTypes.TEXT_TSV, CustomMediaTypes.IMAGE_JPEG, CustomMediaTypes.IMAGE_PNG})
+      CustomMediaTypes.TEXT_TSV})
   public Object getEdges(
       @ApiParam(value = "The type of the edge", required = true) @PathParam("type") String type,
       @ApiParam(value = "Should subproperties and equivalent properties be included",
@@ -321,7 +321,7 @@ public class GraphService extends BaseResource {
   @Produces({MediaType.APPLICATION_JSON, CustomMediaTypes.APPLICATION_GRAPHSON,
       MediaType.APPLICATION_XML, CustomMediaTypes.APPLICATION_GRAPHML,
       CustomMediaTypes.APPLICATION_XGMML, CustomMediaTypes.TEXT_GML, CustomMediaTypes.TEXT_CSV,
-      CustomMediaTypes.TEXT_TSV, CustomMediaTypes.IMAGE_JPEG, CustomMediaTypes.IMAGE_PNG})
+      CustomMediaTypes.TEXT_TSV})
   public Object reachableFrom(
       @ApiParam(value = "The type of the edge", required = true) @PathParam("id") String id,
       @ApiParam(value = "A label hint to find the start node.",

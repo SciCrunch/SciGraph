@@ -47,10 +47,4 @@ public class CustomMediaTypes {
   public final static String TEXT_GML = "text/gml";
   public final static MediaType TEXT_GML_TYPE = new MediaType("text", "gml");
 
-  public final static String IMAGE_JPEG = "image/jpeg";
-  public final static MediaType IMAGE_JPEG_TYPE = new MediaType("image", "jpeg");
-
-  public final static String IMAGE_PNG = "image/png";
-  public final static MediaType IMAGE_PNG_TYPE = new MediaType("image", "png");
-
 }

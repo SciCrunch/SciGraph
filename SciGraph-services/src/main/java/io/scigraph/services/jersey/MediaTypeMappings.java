@@ -37,9 +37,6 @@ public final class MediaTypeMappings extends ForwardingMap<String, MediaType> {
     delegate.put("graphml", CustomMediaTypes.APPLICATION_GRAPHML_TYPE);
     delegate.put("gml", CustomMediaTypes.TEXT_GML_TYPE);
     delegate.put("gr", CustomMediaTypes.APPLICATION_XGMML_TYPE);
-    delegate.put("jpg", CustomMediaTypes.IMAGE_JPEG_TYPE);
-    delegate.put("jpeg", CustomMediaTypes.IMAGE_JPEG_TYPE);
-    delegate.put("png", CustomMediaTypes.IMAGE_PNG_TYPE);
   }
 
   @Override

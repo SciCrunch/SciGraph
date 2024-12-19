@@ -45,9 +45,7 @@ public class JaxRsUtil {
           CustomMediaTypes.APPLICATION_GRAPHML_TYPE,
           CustomMediaTypes.APPLICATION_GRAPHSON_TYPE,
           CustomMediaTypes.APPLICATION_XGMML_TYPE,
-          CustomMediaTypes.TEXT_GML_TYPE,
-          CustomMediaTypes.IMAGE_JPEG_TYPE,
-          CustomMediaTypes.IMAGE_PNG_TYPE).add().build();
+          CustomMediaTypes.TEXT_GML_TYPE).add().build();
 
   public static boolean isVariant(Request request, MediaType type) {
     return request.selectVariant(VARIANTS).getMediaType().equals(type);
