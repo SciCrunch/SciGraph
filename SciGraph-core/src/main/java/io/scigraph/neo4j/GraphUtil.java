@@ -181,7 +181,7 @@ public class GraphUtil {
    */
   public static boolean ignoreProperty(Object value) {
     if (value instanceof String
-        && (CharMatcher.WHITESPACE.matchesAllOf((String) value)
+        && (CharMatcher.whitespace().matchesAllOf((String) value)
             || StopAnalyzer.ENGLISH_STOP_WORDS_SET.contains(((String) value).toLowerCase()))) {
       return true;
     } 
