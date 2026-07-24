@@ -16,6 +16,7 @@
 package io.scigraph.owlapi;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -24,10 +25,11 @@ import java.util.logging.Logger;
 
 import org.apache.commons.validator.routines.UrlValidator;
 import org.coode.owlapi.obo12.parser.OBO12ParserFactory;
-import org.coode.owlapi.oboformat.OBOFormatParserFactory;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.OWLParserFactory;
-import org.semanticweb.owlapi.io.OWLParserFactoryRegistry;
+import org.semanticweb.owlapi.oboformat.OBOFormatOWLAPIParserFactory;
+import org.semanticweb.owlapi.model.OWLOntologyManager;
+import org.semanticweb.owlapi.util.PriorityCollection;
 import org.semanticweb.owlapi.io.XMLUtils;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLAnnotationProperty;
@@ -130,8 +132,8 @@ public class OwlApiUtils {
 
   public static String getIri(OWLOntology ontology) {
     String iri = "_:" + hash(ontology.toString());
-    if (null != ontology.getOntologyID() && null != ontology.getOntologyID().getOntologyIRI()) {
-      iri = ontology.getOntologyID().getOntologyIRI().toString();
+    if (null != ontology.getOntologyID() && ontology.getOntologyID().getOntologyIRI().isPresent()) {
+      iri = ontology.getOntologyID().getOntologyIRI().get().toString();
     } else {
       if (!ontologiesWithoutIris.contains(ontology)) {
         ontologiesWithoutIris.add(ontology);
@@ -177,22 +179,19 @@ public class OwlApiUtils {
     if (silencedParser) {
       return;
     }
-    OWLManager.createOWLOntologyManager();
-    /* TODO: Why does this logging never become silent?
-     * Logger logger = Logger.getLogger("org.obolibrary");
-    logger.setLevel(java.util.logging.Level.SEVERE);
-    Handler[] handlers = logger.getHandlers();
-    for (Handler handler : handlers) {
-      handler.setLevel(Level.SEVERE);
-    }*/
-    // TODO: Why does this cause a concurrent modification exception if not synchronized
-    OWLParserFactoryRegistry registry = OWLParserFactoryRegistry.getInstance();
-    List<OWLParserFactory> factories = registry.getParserFactories();
+    // owlapi 5 replaced the global OWLParserFactoryRegistry with a per-manager
+    // PriorityCollection of parser factories obtained from the manager.
+    OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+    PriorityCollection<OWLParserFactory> factories = manager.getOntologyParsers();
+    List<OWLParserFactory> toRemove = new ArrayList<>();
     for (OWLParserFactory factory : factories) {
-      if (factory instanceof OBOFormatParserFactory ||
+      if (factory instanceof OBOFormatOWLAPIParserFactory ||
           factory instanceof OBO12ParserFactory) {
-        registry.unregisterParserFactory(factory);
+        toRemove.add(factory);
       }
+    }
+    for (OWLParserFactory factory : toRemove) {
+      factories.remove(factory);
     }
     silencedParser = true;
   }

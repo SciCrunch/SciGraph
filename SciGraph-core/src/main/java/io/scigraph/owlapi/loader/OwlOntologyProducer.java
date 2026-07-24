@@ -158,7 +158,7 @@ final class OwlOntologyProducer implements Callable<Long> {
                 emptyOntologies.add(ontologyIRI);
                 try {
                   OWLOntology emptyOntology = manager.createOntology(ontologyIRI);
-                  return emptyOntology.getOntologyID().getDefaultDocumentIRI();
+                  return emptyOntology.getOntologyID().getDefaultDocumentIRI().orElse(null);
                 } catch (OWLOntologyCreationException e) {
                   logger.log(Level.SEVERE, "This should never happen: " + e);
                   return null;

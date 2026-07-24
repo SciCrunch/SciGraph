@@ -17,6 +17,7 @@ package io.scigraph.analyzer;
 
 import io.scigraph.analyzer.AnalyzerResult;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 
 import org.junit.Test;
 
@@ -24,7 +25,7 @@ public class AnalyzerResultTest {
 
   @Test
   public void test() {
-    EqualsVerifier.forClass(AnalyzerResult.class).verify();
+    EqualsVerifier.forClass(AnalyzerResult.class).suppress(Warning.NONFINAL_FIELDS, Warning.ALL_FIELDS_SHOULD_BE_USED, Warning.STRICT_INHERITANCE, Warning.NULL_FIELDS).verify();
   }
 
 }

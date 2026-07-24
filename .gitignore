@@ -106,3 +106,4 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 
+dependency-reduced-pom.xml

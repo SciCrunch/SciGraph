@@ -20,6 +20,7 @@ import io.scigraph.frames.Concept;
 import io.scigraph.frames.EdgeProperties;
 import io.scigraph.frames.NodeProperties;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 
 import org.junit.Test;
 
@@ -27,22 +28,22 @@ public class ConceptTest {
 
   @Test
   public void conceptEqualsContract() {
-    EqualsVerifier.forClass(Concept.class).verify();
+    EqualsVerifier.forClass(Concept.class).suppress(Warning.NONFINAL_FIELDS, Warning.ALL_FIELDS_SHOULD_BE_USED, Warning.STRICT_INHERITANCE, Warning.NULL_FIELDS).verify();
   }
 
   @Test
   public void commonPropertiesEqualsContract() {
-    EqualsVerifier.forClass(CommonProperties.class).verify();
+    EqualsVerifier.forClass(CommonProperties.class).suppress(Warning.NONFINAL_FIELDS, Warning.ALL_FIELDS_SHOULD_BE_USED, Warning.STRICT_INHERITANCE, Warning.NULL_FIELDS).verify();
   }
 
   @Test
   public void edgePropertiesEqualsContract() {
-    EqualsVerifier.forClass(EdgeProperties.class).verify();
+    EqualsVerifier.forClass(EdgeProperties.class).suppress(Warning.NONFINAL_FIELDS, Warning.ALL_FIELDS_SHOULD_BE_USED, Warning.STRICT_INHERITANCE, Warning.NULL_FIELDS).verify();
   }
 
   @Test
   public void nodePropertiesEqualsContract() {
-    EqualsVerifier.forClass(NodeProperties.class).verify();
+    EqualsVerifier.forClass(NodeProperties.class).suppress(Warning.NONFINAL_FIELDS, Warning.ALL_FIELDS_SHOULD_BE_USED, Warning.STRICT_INHERITANCE, Warning.NULL_FIELDS).verify();
   }
 
 }

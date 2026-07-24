@@ -18,6 +18,7 @@ package io.scigraph.owlapi;
 import io.scigraph.owlapi.loader.OwlLoadConfiguration.ReasonerConfiguration;
 
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -40,8 +41,9 @@ import org.semanticweb.owlapi.model.OWLOntologyManager;
 import org.semanticweb.owlapi.model.OWLSubClassOfAxiom;
 import org.semanticweb.owlapi.model.RemoveAxiom;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
+import org.semanticweb.owlapi.search.EntitySearcher;
 import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
-import org.semanticweb.owlapi.util.OWLClassExpressionVisitorAdapter;
+import org.semanticweb.owlapi.model.OWLClassExpressionVisitor;
 
 import com.google.common.collect.Iterables;
 
@@ -73,11 +75,14 @@ public class ReasonerUtil {
   }
 
   Collection<OWLOntologyChange> removeAxioms(AxiomType<?> type) {
-    Collection<OWLOntologyChange> removals = new HashSet<>();
+    List<OWLOntologyChange> removals = new ArrayList<>();
     for (OWLOntology importedOnt: ont.getImportsClosure()) {
       Set<? extends OWLAxiom> axioms = importedOnt.getAxioms(type);
-      removals.addAll(manager.removeAxioms(importedOnt, axioms));
+      for (OWLAxiom axiom : axioms) {
+        removals.add(new RemoveAxiom(importedOnt, axiom));
+      }
     }
+    manager.applyChanges(removals);
     return removals;
   }
 
@@ -128,7 +133,7 @@ public class ReasonerUtil {
     //find indirect superclasses, I
     Set<OWLClass> indirectSuperclasses = reasoner.getSuperClasses(ce, false).getFlattened();
     //find asserted superclasses, A
-    Set<OWLClassExpression> assertedSuperclasses = ce.asOWLClass().getSuperClasses(ont);
+    Collection<OWLClassExpression> assertedSuperclasses = EntitySearcher.getSuperClasses(ce.asOWLClass(), ont).collect(Collectors.toList());
     //for each d in D, add an edge subClassOf(x d)
     for (OWLClass directSuperclass: directSuperclasses) {
       OWLAxiom axiom = factory.getOWLSubClassOfAxiom(ce, directSuperclass);
@@ -162,7 +167,7 @@ public class ReasonerUtil {
       for (final OWLOntology importedOntology: ont.getImportsClosure()) {
         Set<OWLSubClassOfAxiom> subClassAxioms = importedOntology.getSubClassAxiomsForSubClass(cls);
         for (final OWLSubClassOfAxiom subClassAxiom : subClassAxioms) {
-          subClassAxiom.getSuperClass().accept(new OWLClassExpressionVisitorAdapter(){
+          subClassAxiom.getSuperClass().accept(new OWLClassExpressionVisitor(){
             @Override
             public void visit(OWLClass desc) {
               if (directSuperClasses.contains(desc) == false) {
@@ -174,8 +179,8 @@ public class ReasonerUtil {
       }
     }
     logger.info("Found redundant axioms: " + changes.size());
-    List<OWLOntologyChange> result = manager.applyChanges(changes);
-    logger.info("Removed axioms: " + result.size());
+    manager.applyChanges(changes);
+    logger.info("Removed axioms: " + changes.size());
   }
 
   void flush() {

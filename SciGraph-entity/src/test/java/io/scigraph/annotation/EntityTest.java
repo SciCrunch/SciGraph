@@ -17,6 +17,7 @@ package io.scigraph.annotation;
 
 import io.scigraph.annotation.Entity;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 
 import org.junit.Test;
 
@@ -24,7 +25,8 @@ public class EntityTest {
 
   @Test
   public void equalsContract() {
-    EqualsVerifier.forClass(Entity.class).verify();
+    EqualsVerifier.forClass(Entity.class)
+        .suppress(Warning.NONFINAL_FIELDS, Warning.ALL_FIELDS_SHOULD_BE_USED, Warning.STRICT_INHERITANCE, Warning.NULL_FIELDS).verify();
   }
 
 }

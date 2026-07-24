@@ -94,7 +94,21 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.18</version>
+        <version>2.22.2</version>
+        <configuration>
+          <!-- Neo4j 3.4.x and other older libraries reflect into JDK internals that
+               are strongly encapsulated since Java 16+. Open the required java.base
+               packages so the test suite runs on modern JDKs (e.g. Java 25). -->
+          <argLine>
+            --add-opens=java.base/java.lang=ALL-UNNAMED
+            --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+            --add-opens=java.base/java.io=ALL-UNNAMED
+            --add-opens=java.base/java.nio=ALL-UNNAMED
+            --add-opens=java.base/java.util=ALL-UNNAMED
+            --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+            --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
+          </argLine>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -112,7 +126,20 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
-        <version>2.18</version>
+        <version>2.22.2</version>
+        <configuration>
+          <!-- Same java.base opens as surefire, so integration tests that start
+               Neo4j 3.4.x run on modern JDKs (incl. Java 25). -->
+          <argLine>
+            --add-opens=java.base/java.lang=ALL-UNNAMED
+            --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+            --add-opens=java.base/java.io=ALL-UNNAMED
+            --add-opens=java.base/java.nio=ALL-UNNAMED
+            --add-opens=java.base/java.util=ALL-UNNAMED
+            --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+            --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
+          </argLine>
+        </configuration>
         <executions>
           <execution>
             <goals>
@@ -215,7 +242,7 @@
     <dependency>
       <groupId>nl.jqno.equalsverifier</groupId>
       <artifactId>equalsverifier</artifactId>
-      <version>1.7.3</version>
+      <version>3.19.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>

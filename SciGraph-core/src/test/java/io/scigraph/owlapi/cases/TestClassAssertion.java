@@ -24,6 +24,7 @@ import io.scigraph.owlapi.OwlRelationships;
 
 import org.junit.Test;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Relationship;
 
 public class TestClassAssertion extends OwlTestCase {
@@ -42,9 +43,13 @@ public class TestClassAssertion extends OwlTestCase {
 
   @Test
   public void anonymousLabelsAreAppliedToAnonymousIndividuals() {
-    Node anon = getNode("_:anonymousIndividual");
-    assertThat(anon.hasLabel(OwlLabels.OWL_ANONYMOUS), is(true));
-    
+    // owlapi 5 remaps blank-node ids at load time, so an anonymous individual no
+    // longer has a predictable IRI. Verify the OWL_ANONYMOUS label is applied by
+    // locating the node via its label rather than a hard-coded blank node id.
+    try (ResourceIterator<Node> anonymousNodes = graphDb.findNodes(OwlLabels.OWL_ANONYMOUS)) {
+      assertThat("an anonymous individual should be labeled OWL_ANONYMOUS",
+          anonymousNodes.hasNext(), is(true));
+    }
   }
 
 }
